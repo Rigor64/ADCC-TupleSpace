@@ -30,22 +30,26 @@
 new(Name) ->
 	register(Name, spawn(ts_actor, init, [])),
 	io:format("New tuple space created: ~p\n", [Name]),
+	addNode(Name, self()),
 	ok
 .
 
 % Read Pattern from the tuple space TS (desctructive)
 in(TS, Pattern) ->
-	{todo, TS, Pattern}
+	Ret = in(TS, Pattern, infinity),
+	Ret
 .
 
 % Read Pattern from the tuple space TS (non-desctructive)
 rd(TS, Pattern) ->
-	{todo, TS, Pattern}
+	Ret = rd(TS, Pattern, infinity),
+	Ret
 .
 
 % Write Tuple in the tuple space TS
 out(TS, Tuple) ->
-	{todo, TS, Tuple}
+	TS!{out, self(), Tuple},
+	ok
 .
 
 
@@ -55,23 +59,28 @@ out(TS, Tuple) ->
 
 % Read Pattern from the tuple space TS (desctructive)
 in(TS, Pattern, Timeout) ->
-	{todo, TS, Pattern, Timeout}
+	% Send in request
+	TS!{in, self(), Pattern},
 
-	% receive
-	% 	Pattern -> {ok, Tuple} % Da sistemare palese
-	% after
-	% 	Timeout -> {err, timeout}
-	% end
-
-	% {ok, Tuple}
-	% {err, timeout}
+	% Wait for message
+	receive
+		{ok, Tuple} -> {ok, Tuple}
+	after
+		Timeout -> {err, timeout}
+	end
 .
 
 % Read Pattern from the tuple space TS (non-desctructive)
 rd(TS, Pattern, Timeout) ->
-	{todo, TS, Pattern, Timeout}
-	% {ok, Tuple}
-	% {err, timeout}
+	% Send in request
+	TS!{rd, self(), Pattern},
+
+	% Wait for message
+	receive
+		{ok, Tuple} -> {ok, Tuple}
+	after
+		Timeout -> {err, timeout}
+	end
 .
 
 
@@ -79,14 +88,23 @@ rd(TS, Pattern, Timeout) ->
 
 % Add Node to the TS, so Node can access to all tuples of TS
 addNode(TS, Node) ->
-	{todo, TS, Node}
+	% Send in request
+	TS!{add_node, Node},
 .
 
 % Remove Node from the TS
 removeNode(TS, Node) ->
-	{todo, TS, Node}
+	% Send in request
+	TS!{remove_node, Node},
 .
 
+% Get list of nodes who can access to the tuple space
 nodes(TS) ->
-	{todo, TS}
+	% Send nodes request
+	TS!{nodes, self()}
+
+	% Wait for result
+	receive
+		{nodes, List} -> todo
+	end
 .
