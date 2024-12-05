@@ -69,8 +69,8 @@ Il progetto si propone di ...
 * removeNode : viene eliminato il nodo dalla WhiteList, il nodo non decade, ma non ha più la possibilità di accedere alle tabelle ETS
 * Abbiamo implementato due tabelle ETS:
 
-  * WhiteList (WL) : ETS per Pid autorizzati all'accesso.
-  * Space : ETS per la gestione dello spazio di tuple
+  * WhiteList (WL) : ETS per Pid autorizzati all'accesso. Tipologia set perchè contiene solo Pid e quest'ultimo è univoco, quindi lo utilizziamo come chiave
+  * Space : ETS per la gestione dello spazio di tuple. Tipologia duplicate_bag per avere tuple duplicate e chiavi non univoche.
 
 * WaitQueue : Lista temporanea per i messaggi in attesa (in , rd)
 
