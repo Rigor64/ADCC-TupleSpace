@@ -23,6 +23,7 @@
 
 % Creates a new tuple space with Name
 new(Name) ->
+	% register(spawn())
 	{todo, Name}
 .
 
