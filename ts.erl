@@ -1,4 +1,7 @@
+% Module definition
 -module(ts).
+
+% Export all invokable functions
 -export([
 	% Interfaces 1/3
 	new/1,
@@ -16,6 +19,8 @@
 	nodes/1
 ]).
 
+% Import ts_actor
+-import(ts_actor).
 
 
 
@@ -23,8 +28,9 @@
 
 % Creates a new tuple space with Name
 new(Name) ->
-	% register(spawn())
-	{todo, Name}
+	register(Name, spawn(ts_actor, init, [])),
+	io:format("New tuple space created: ~p\n", [Name]),
+	ok
 .
 
 % Read Pattern from the tuple space TS (desctructive)
