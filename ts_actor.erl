@@ -10,9 +10,9 @@ init() ->
 	
 	% Obtain reference for tables
 	% Create ETS whitelist
-	WhiteListRef = ets:new(whitelist, []),
+	WhiteListRef = ets:new(whitelist, [set, private]),
 	% Create ETS space
-	TupleSpaceRef = ets:new(space, []),
+	TupleSpaceRef = ets:new(space, [duplicate_bag, private]),
 
 	% Start server
 	server(WhiteListRef, TupleSpaceRef, [])
@@ -32,6 +32,15 @@ server(WL, TS, WaitQueue) ->
 		
 		% Handle ETS write, WaitQueue removal
 		{out, Pid, Tuple} -> ok, server(WL, TS, WaitQueue);
+
+		% Handle add node
+		{add_node, Pid} -> ok, server(WL, TS, WaitQueue);
+
+		% Handle remove node
+		{remove_node, Pid} -> ok, server(WL, TS, WaitQueue);
+
+		% Handle node list
+		{nodes, Pid} -> ok, server(WL, TS, WaitQueue);
 
 		% Wildcard for remove trash messages
 		_ -> server(WL, TS, WaitQueue)
