@@ -72,6 +72,10 @@ Il progetto si propone di ...
   * WhiteList (WL) : ETS per Pid autorizzati all'accesso. Tipologia set perchè contiene solo Pid e quest'ultimo è univoco, quindi lo utilizziamo come chiave
   * Space : ETS per la gestione dello spazio di tuple. Tipologia duplicate_bag per avere tuple duplicate e chiavi non univoche.
 
+* add_node : non ha un controllo sugli accessi poichè se un nodo muore non potrebbe più linkarsi al tuple space a cui era apparteneva
+
+* remove_node : ha un controllo per verificare che sia prendete il nodo nella tabella ETS
+
 * WaitQueue : Lista temporanea per i messaggi in attesa (in , rd)
 
 <p align="right">(<a href="#readme-top">Torna su</a>)</p>
