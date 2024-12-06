@@ -22,7 +22,7 @@ init() ->
 server(WL, TS, WaitQueue) ->
 	receive
 		% Handle whitelist removal
-		{'EXIT', Pid, Reason} -> ok, server(WL, TS, WaitQueue);
+		{'EXIT', Pid, _Reason} -> removeFromWhiteList(WL, Pid), server(WL, TS, WaitQueue);
 
 		% Handle ETS destructive read
 		{in, Pid, Pattern} -> ok, server(WL, TS, WaitQueue);
@@ -34,13 +34,14 @@ server(WL, TS, WaitQueue) ->
 		{out, Pid, Tuple} -> ok, server(WL, TS, WaitQueue);
 
 		% Handle add node
-		{add_node, Pid} -> ok, server(WL, TS, WaitQueue);
+		{add_node, Pid, Node} -> addNode(WL, Node), Pid!{ok, "Il nodo ~p è stato aggiunto", Node}, server(WL, TS, WaitQueue);
 
 		% Handle remove node
-		{remove_node, Pid} -> ok, server(WL, TS, WaitQueue);
+		{remove_node, Pid, Node} -> removeNode(Node), Pid!{ok, "Il nodo ~p è stato rimosso", Node}, server(WL, TS, WaitQueue);
+		% Ritorna un messaggio {'EXIT', Pid, _ } 
 
 		% Handle node list
-		{nodes, Pid} -> ok, server(WL, TS, WaitQueue);
+		{nodes, Pid} -> Pid!{ok, getNodes(WL)}, server(WL, TS, WaitQueue);
 
 		% Wildcard for remove trash messages
 		_ -> server(WL, TS, WaitQueue)
@@ -48,6 +49,26 @@ server(WL, TS, WaitQueue) ->
 .
 
 
-in_whitelist(Pid, WL) ->
-	ok
+getNodes(WL) ->
+	F = fun(Elem, Acc) ->
+		Acc ++ Elem	
+	end,
+	Acc = ets:foldr(F, [], WL),
+	Acc
+.
+
+removeNode(Node) ->
+	unlink(Node)
+.
+
+removeFromWhiteList(WL, Node) ->
+	% Remove node from the whitelist
+	ets:delete(WL, Node)
+.
+ 
+addNode(WL, Node) ->
+	% Insert the node in the whitelist
+	ets:insert(WL, Node),
+	% Link the node with the GTS
+	link(Node)
 .

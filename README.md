@@ -79,3 +79,8 @@ Il progetto si propone di ...
 * WaitQueue : Lista temporanea per i messaggi in attesa (in , rd)
 
 <p align="right">(<a href="#readme-top">Torna su</a>)</p>
+
+
+Stress Test:
+
+provare a rimuovere un Ts_actor e vedere se è ancora vivo
