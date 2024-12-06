@@ -62,35 +62,27 @@ Il progetto si propone di ...
 
 * Modulo ts_actor : inizializzazione delle tabelle ETS e interfaccia del server
 
-* Modulo ts : 
+* Modulo ts : nodi figli che ereditano la funzione init() del padre
 
 * TrapExit: è stato implemenatto per tutelare il Server Tuple Space dalla caduta di un eventuale link non autorizzato
+
 * ETS private, così da non esporre le tabelle ai nodi esterni
-* removeNode : viene eliminato il nodo dalla WhiteList, il nodo non decade, ma non ha più la possibilità di accedere alle tabelle ETS
+
 * Abbiamo implementato due tabelle ETS:
 
   * WhiteList (WL) : ETS per Pid autorizzati all'accesso. Tipologia set perchè contiene solo Pid e quest'ultimo è univoco, quindi lo utilizziamo come chiave
   * Space : ETS per la gestione dello spazio di tuple. Tipologia duplicate_bag per avere tuple duplicate e chiavi non univoche.
 
-* Solo per operazioni di in, rd e out il nodo deve essere autenticato, quindi essere presente nella tabella dei Pid
-
-* notes: non ha un controllo sugli accessi
+* WaitQueue : Lista temporanea per i messaggi in attesa (in , rd)
 
 * add_node : non ha un controllo sugli accessi poichè se un nodo muore non potrebbe più linkarsi al tuple space a cui era apparteneva
 
-* remove_node : non ha un controllo per verificare che sia prendete il nodo nella tabella ETS
-
-* WaitQueue : Lista temporanea per i messaggi in attesa (in , rd)
+* removeNode : viene rimosso il link tra nodo padre e figlio, questo ritorna un messaggio di EXIT a entrambi, quindi viene eliminato il nodo dalla WhiteList. Il nodo muori poichè ha ricevuto il messaggio di EXIT
 
 <p align="right">(<a href="#readme-top">Torna su</a>)</p>
 
+### Stress Test Result
 
-<!-- GESTIONE DEGLI ERRORI -->
-### Gestione degli ERRORI
+1. Provare a rimuovere un Ts_actor e vedere se è ancora vivo.
 
-Se un nodo figlio muore, decade il link, il nodo supervisore riceverà un messaggio di {EXIT, Pid, Reason} e il nodo figlio sarà rimosso dalla tabella ETS WhiteList
-
-
-<p align="right">(<a href="#readme-top">Torna su</a>)</p>
-
-ets: new
+2. Etteffuare una batteria di test per ogni operazione (in, rd, out).
