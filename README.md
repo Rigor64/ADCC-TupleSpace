@@ -62,27 +62,25 @@ Il progetto si propone di ...
 
 * Modulo ts_actor : inizializzazione delle tabelle ETS e interfaccia del server
 
-* Modulo ts : nodi figli che ereditano la funzione init() del padre
+* Modulo ts : 
 
 * TrapExit: è stato implemenatto per tutelare il Server Tuple Space dalla caduta di un eventuale link non autorizzato
-
 * ETS private, così da non esporre le tabelle ai nodi esterni
-
+* removeNode : viene eliminato il nodo dalla WhiteList, il nodo non decade, ma non ha più la possibilità di accedere alle tabelle ETS
 * Abbiamo implementato due tabelle ETS:
 
   * WhiteList (WL) : ETS per Pid autorizzati all'accesso. Tipologia set perchè contiene solo Pid e quest'ultimo è univoco, quindi lo utilizziamo come chiave
   * Space : ETS per la gestione dello spazio di tuple. Tipologia duplicate_bag per avere tuple duplicate e chiavi non univoche.
 
-* WaitQueue : Lista temporanea per i messaggi in attesa (in , rd)
-
 * add_node : non ha un controllo sugli accessi poichè se un nodo muore non potrebbe più linkarsi al tuple space a cui era apparteneva
 
-* removeNode : viene rimosso il link tra nodo padre e figlio, questo ritorna un messaggio di EXIT a entrambi, quindi viene eliminato il nodo dalla WhiteList. Il nodo muori poichè ha ricevuto il messaggio di EXIT
+* remove_node : ha un controllo per verificare che sia prendete il nodo nella tabella ETS
+
+* WaitQueue : Lista temporanea per i messaggi in attesa (in , rd)
 
 <p align="right">(<a href="#readme-top">Torna su</a>)</p>
 
-### Stress Test Result
 
-1. Provare a rimuovere un Ts_actor e vedere se è ancora vivo.
+Stress Test:
 
-2. Etteffuare una batteria di test per ogni operazione (in, rd, out).
+provare a rimuovere un Ts_actor e vedere se è ancora vivo
