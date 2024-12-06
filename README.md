@@ -62,7 +62,7 @@ Il progetto si propone di ...
 
 * Modulo ts_actor : inizializzazione delle tabelle ETS e interfaccia del server
 
-* Modulo ts : 
+* Modulo ts : nodi figli che ereditano la funzione init() del padre
 
 * TrapExit: è stato implemenatto per tutelare il Server Tuple Space dalla caduta di un eventuale link non autorizzato
 * ETS private, così da non esporre le tabelle ai nodi esterni
@@ -72,14 +72,13 @@ Il progetto si propone di ...
   * WhiteList (WL) : ETS per Pid autorizzati all'accesso. Tipologia set perchè contiene solo Pid e quest'ultimo è univoco, quindi lo utilizziamo come chiave
   * Space : ETS per la gestione dello spazio di tuple. Tipologia duplicate_bag per avere tuple duplicate e chiavi non univoche.
 
+* WaitQueue : Lista temporanea per i messaggi in attesa (in , rd)
+
 * add_node : non ha un controllo sugli accessi poichè se un nodo muore non potrebbe più linkarsi al tuple space a cui era apparteneva
 
 * remove_node : ha un controllo per verificare che sia prendete il nodo nella tabella ETS
 
-* WaitQueue : Lista temporanea per i messaggi in attesa (in , rd)
-
 <p align="right">(<a href="#readme-top">Torna su</a>)</p>
-
 
 Stress Test:
 

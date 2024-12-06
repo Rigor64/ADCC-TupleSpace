@@ -24,8 +24,6 @@
 
 
 
-
-
 % Creates a new tuple space with Name
 new(Name) ->
 	register(Name, spawn(ts_actor, init, [])),
@@ -51,11 +49,6 @@ out(TS, Tuple) ->
 	TS!{out, self(), Tuple},
 	ok
 .
-
-
-
-
-
 
 % Read Pattern from the tuple space TS (desctructive)
 in(TS, Pattern, Timeout) ->
