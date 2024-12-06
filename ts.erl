@@ -1,6 +1,9 @@
 % Module definition
 -module(ts).
 
+% Import tsm
+%-include(tsm).
+
 % Export all invokable functions
 -export([
 	% Interfaces 1/3
@@ -19,14 +22,11 @@
 	nodes/1
 ]).
 
-% Import ts_actor
--import(tsm).
-
 
 
 % Creates a new tuple space with Name
 new(Name) ->
-	register(Name, spawn(ts_actor, init, [])),
+	register(Name, spawn(tsm, init, [])),
 	io:format("New tuple space created: ~p\n", [Name]),
 	addNode(Name, self()),
 	ok
@@ -82,22 +82,22 @@ rd(TS, Pattern, Timeout) ->
 % Add Node to the TS, so Node can access to all tuples of TS
 addNode(TS, Node) ->
 	% Send in request
-	TS!{add_node, Node},
+	TS!{add_node, self(), Node}
 .
 
 % Remove Node from the TS
 removeNode(TS, Node) ->
 	% Send in request
-	TS!{remove_node, Node},
+	TS!{remove_node, self(), Node}
 .
 
 % Get list of nodes who can access to the tuple space
 nodes(TS) ->
 	% Send nodes request
-	TS!{nodes, self()}
-
-	% Wait for result
+	TS!{nodes, self()},
 	receive
-		{nodes, List} -> todo
+		{ok, List} -> List
+	after
+		5000 -> {err, timeout}
 	end
 .
