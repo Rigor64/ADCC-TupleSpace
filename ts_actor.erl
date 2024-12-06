@@ -25,7 +25,17 @@ server(WL, TS, WaitQueue) ->
 		{'EXIT', Pid, _Reason} -> removeFromWhiteList(WL, Pid), server(WL, TS, WaitQueue);
 
 		% Handle ETS destructive read
-		{in, Pid, Pattern} -> ok, server(WL, TS, WaitQueue);
+		{in, Pid, Pattern} -> 
+			% Check if is in the white list 
+			Present = inWhiteList(WL, Pid),
+			case Present of 
+				% If autorized try to read and wait otherwise
+				true ->
+					NWQ = tmpFunc(TS, {in, Pid, Pattern}, WaitQueue);
+				_ -> 
+					NWQ = WaitQueue
+			end,	
+			server(WL, TS, NWQ);
 		
 		% Handle ETS non-destructive read
 		{rd, Pid, Pattern} -> ok, server(WL, TS, WaitQueue);
@@ -71,4 +81,30 @@ addNode(WL, Node) ->
 	ets:insert(WL, Node),
 	% Link the node with the GTS
 	link(Node)
+.
+
+% Check if the node is in the whitelist
+inWhiteList(WL, Node) ->
+	Res = ets:lookup(WL, Node),
+	case Res of
+		[] -> false;
+		_  -> true
+	end 
+.
+
+
+tmpFunc(TS, {in, Pid, Pattern}, WaitQueue) -> 
+	% Control  on Pattern Matching
+	Res = ets:lookup(TS, Pattern),
+	case Res of
+		% If not in the tuple space add to waitqueue
+		[] ->
+			NWQ = WaitQueue ++ {in, Pid, Pattern};
+		% Else return the element and delete the tuple from the tuple space
+		[H | _T] ->
+			Pid!{ok, H},
+			ets:delete(TS, H),
+			NWQ = WaitQueue
+	end,
+	NWQ
 .
