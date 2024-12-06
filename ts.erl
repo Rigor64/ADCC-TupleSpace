@@ -20,7 +20,7 @@
 ]).
 
 % Import ts_actor
--import(ts_actor).
+-import(tsm).
 
 
 

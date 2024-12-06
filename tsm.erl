@@ -1,4 +1,5 @@
--module(ts_actor).
+% Tuple-Space Manager module
+-module(tsm).
 -export([
 	init/0
 ]).
