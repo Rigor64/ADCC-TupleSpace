@@ -9,7 +9,7 @@ init() ->
 	% Enable trap_exit management
 	erlang:process_flag(trap_exit, true),
 	
-	io:format("Debug print - INIT PID (~p)\n", [self()]),
+	%io:format("Debug print - INIT PID (~p)\n", [self()]),
 
 	% Obtain reference for tables
 	% Create ETS whitelist
@@ -23,7 +23,7 @@ init() ->
 
 % Real TS Server
 server(WL, TS, WaitQueue) ->
-	io:format("Debug print - SERVER PID (~p)\n", [self()]),
+	%io:format("Debug print - SERVER PID (~p)\n", [self()]),
 
 	receive
 		% Handle whitelist removal
@@ -32,7 +32,7 @@ server(WL, TS, WaitQueue) ->
 		% Handle ETS destructive read
 		{in, Pid, Pattern} -> 
 			% Check if is in the white list 
-			Present = inWhiteList(WL, Pid),
+			Present = true,%inWhiteList(WL, Pid),
 			case Present of 
 				% If autorized try to read and wait otherwise
 				true ->
@@ -44,7 +44,7 @@ server(WL, TS, WaitQueue) ->
 		
 		% Handle ETS non-destructive read
 		{rd, Pid, Pattern} -> % Check if is in the white list 
-			Present = inWhiteList(WL, Pid),
+			Present = true,%inWhiteList(WL, Pid),
 			case Present of 
 				% If autorized try to read and wait otherwise
 				true ->
@@ -56,16 +56,18 @@ server(WL, TS, WaitQueue) ->
 		
 		% Handle ETS write, WaitQueue removal
 		{out, Pid, Tuple} -> 
-			Present = inWhiteList(WL, Pid),
+			Present = true,%inWhiteList(WL, Pid),
+			io:format("Debug print - OUT (~p)\n", [Tuple]),
+			io:format("Debug print - OUT - inWhiteList (~p)\n", [Present]),
 			case Present of 
 				% If autorized try to read and wait otherwise
 				true ->
-					ets:insert(TS, {Tuple}),
-					io:format("Debug print - OUT (~p)\n", [Tuple]),
+					_InsertRes = ets:insert(TS, {Tuple}),
 					NWQ = consumeWQ(TS, WaitQueue);
-				_ -> 
+				false -> 
+					io:format("Debug print - OUT - NOT AUTH (~p)\n", [Present]),
 					NWQ = WaitQueue
-			end, 
+			end,
 			server(WL, TS, NWQ);
 
 		% Handle add node
@@ -81,6 +83,8 @@ server(WL, TS, WaitQueue) ->
 		% Test
 		%{test, Pid} -> Pid!{'ok?'}, ets:insert(WL, {Pid}), server(WL, TS, WaitQueue);
 		{list, Pid} -> Pid!{okpatato, ets:tab2list(TS)}, server(WL, TS, WaitQueue);
+		{wq, Pid} -> Pid!{waitqueue, WaitQueue}, server(WL, TS, WaitQueue);
+		{wl, Pid} -> Pid!{inWhiteList(WL, Pid)}, server(WL, TS, WaitQueue);
 
 		% Wildcard for remove trash messages
 		_ -> server(WL, TS, WaitQueue)
@@ -97,7 +101,8 @@ getNodes(WL) ->
 .
 
 removeNode(WL, Node) ->
-	unlink(Node),
+	io:format("Debug print - Remove Node (func)\n", []),
+	unlink(Node), % Not triggering exit?
 	removeFromWhiteList(WL, Node)
 .
 
@@ -116,10 +121,11 @@ addNode(WL, Node) ->
 
 % Check if the node is in the whitelist
 inWhiteList(WL, Node) ->
+%	Res = ets:match(WL, ets:fun2ms(matchPid)),
 	Res = ets:lookup(WL, {Node}),
 	case Res of
 		[] -> Present = false;
-		_  -> Present = true
+		[_H | _T]  -> Present = true
 	end,
 	Present
 .
@@ -161,7 +167,7 @@ tmpFunc(TS, {Type, Pid, Pattern}, WaitQueue) ->
 	case Res of
 		% If not in the tuple space add to waitqueue
 		[] ->
-			NWQ = WaitQueue ++ {Type, Pid, Pattern};
+			NWQ = WaitQueue ++ [{Type, Pid, Pattern}];
 		% Else return the element 
 		[H | _T] ->
 			Pid!{ok, H},
