@@ -44,7 +44,7 @@ server(WL, TS, WaitQueue) ->
 		
 		% Handle ETS non-destructive read
 		{rd, Pid, Pattern} -> % Check if is in the white list 
-			Present = true,%inWhiteList(WL, Pid),
+			Present = inWhiteList(WL, Pid),
 			case Present of 
 				% If autorized try to read and wait otherwise
 				true ->
@@ -56,7 +56,7 @@ server(WL, TS, WaitQueue) ->
 		
 		% Handle ETS write, WaitQueue removal
 		{out, Pid, Tuple} -> 
-			Present = true,%inWhiteList(WL, Pid),
+			Present = inWhiteList(WL, Pid),
 			io:format("Debug print - OUT (~p)\n", [Tuple]),
 			io:format("Debug print - OUT - inWhiteList (~p)\n", [Present]),
 			case Present of 
@@ -74,8 +74,7 @@ server(WL, TS, WaitQueue) ->
 		{add_node, Pid, Node} -> addNode(WL, Node), Pid!{ok}, server(WL, TS, WaitQueue);
 
 		% Handle remove node
-		{remove_node, Pid, Node} -> removeNode(WL, Node), Pid!{ok}, server(WL, TS, WaitQueue);
-		% Ritorna un messaggio {'EXIT', Pid, _ } 
+		{remove_node, Pid, Node} -> removeNode(WL, Node), Pid!{ok}, server(WL, TS, WaitQueue); 
 
 		% Handle node list
 		{nodes, Pid} -> Pid!{ok, getNodes(WL)}, server(WL, TS, WaitQueue);
@@ -92,6 +91,7 @@ server(WL, TS, WaitQueue) ->
 .
 
 
+% Returns the list of all 'nodes' (Pids) that can access the tuple space
 getNodes(WL) ->
 	F = fun({Elem}, Acc) ->
 		Acc ++ [Elem]	
@@ -109,7 +109,7 @@ removeNode(WL, Node) ->
 removeFromWhiteList(WL, Node) ->
 	% Remove node from the whitelist
 	io:format("Debug print - REMOVE NODE (~p)\n", [Node]),
-	ets:delete(WL, {Node})
+	ets:delete_object(WL, {Node})
 .
  
 addNode(WL, Node) ->
@@ -122,7 +122,10 @@ addNode(WL, Node) ->
 % Check if the node is in the whitelist
 inWhiteList(WL, Node) ->
 %	Res = ets:match(WL, ets:fun2ms(matchPid)),
-	Res = ets:lookup(WL, {Node}),
+	Res = ets:match_object(WL, {Node}),
+	%io:format("Debug print - inWhiteList - Node requested (~p)\n", [Node]),
+	%io:format("Debug print - inWhiteList - WhiteList content (~p)\n", [ets:tab2list(WL)]),
+	%io:format("Debug print - inWhiteList - Result of match (~p)\n", [Res]),
 	case Res of
 		[] -> Present = false;
 		[_H | _T]  -> Present = true
@@ -163,17 +166,17 @@ inWhiteList(WL, Node) ->
 
 tmpFunc(TS, {Type, Pid, Pattern}, WaitQueue) -> 
 	% Control  on Pattern Matching
-	Res = ets:lookup(TS, {Pattern}),
+	Res = ets:match_object(TS, {Pattern}),
 	case Res of
 		% If not in the tuple space add to waitqueue
 		[] ->
 			NWQ = WaitQueue ++ [{Type, Pid, Pattern}];
 		% Else return the element 
-		[H | _T] ->
+		[{H} | _T] ->
 			Pid!{ok, H},
 			case Type of
-				in -> ets:delete(TS, {H});
-				_ -> ok
+				in -> ets:delete_object(TS, {H});
+				rd -> ok
 			end,
 			NWQ = WaitQueue
 	end,
