@@ -34,7 +34,16 @@
 <!-- DESCRIZIONE DEL PROGETTO -->
 ## Descrizione del progetto
 
-Il progetto si propone di ...
+Il progetto si propone di implementare uno **Spazio di Tuple** (Tuple Space - **TS**), ovvero un'astrazione di memoria condivisa, in cui i vari processi possono interagire mediante condivisione di messaggi (message-passing). 
+
+
+Dal momento in cui si verifica la **creazione** del TS in questione (`new(name)`) e vi si **aggiunge** almeno un nodo (`addNode(TS, Node)`), vi è la possibilità di eseguire due tipologie di operazioni di **lettura** ed una operazione di **scrittura** `out(TS, Tuple)`, la quale ha sempre esito positivo. 
+
+Le operazioni di lettura `in(TS, Pattern)` e `rd(TS, Pattern)` sono entrambe **bloccanti** sebbene solo la prima sia distruttiva, ovvero quando la tupla viene letta quest'ultima deve essere eliminata dal TS. 
+Si precisa che, data la natura bloccante delle operazioni in lettura, si definisce, per ognuna, un'ulteriore versione impostando un **timeout**. 
+Pertanto, qualora non venga riscontrata una tupla il cui pattern corrispondi a quello richiesto, si rimane in attesa solo fino a quando il periodo indicato non è decorso. 
+
+Oltre alle prescritte funzioni, vi è anche la possibilità di procedere alla **rimozione** un nodo precedentemente aggiunto nel TS qualora non fosse più d'interesse (`removeNode(TS, Node)`) e di osservare quali sono i nodi ancora presenti nel TS attraverso `nodes(TS)`. 
 
 <p align="right">(<a href="#readme-top">Torna su</a>)</p>
 
@@ -60,9 +69,11 @@ Il progetto si propone di ...
 <!-- SCELTE IMPLEMENTATIVE -->
 ### Scelte implementative
 
-* Modulo ts_actor : inizializzazione delle tabelle ETS e interfaccia del server
+* Modulo `tsm`: Tuple-Space Manager per gestire l'inizializzazione delle tabelle ETS e l'interfaccia del server.
 
-* Modulo ts : nodi figli che ereditano la funzione init() del padre
+* Modulo `ts`: nodi figli che ereditano la funzione `init()` del padre.
+
+* Modulo `tstest`: batteria di Stress Test per qualificare le prestazioni e la resilienza del sistema.
 
 * TrapExit: è stato implemenatto per tutelare il Server Tuple Space dalla caduta di un eventuale link non autorizzato
 
