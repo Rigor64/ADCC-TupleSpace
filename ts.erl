@@ -1,6 +1,9 @@
 % Module definition
 -module(ts).
 
+% Import tsm
+%-include(tsm).
+
 % Export all invokable functions
 -export([
 	% Interfaces 1/3
@@ -19,14 +22,11 @@
 	nodes/1
 ]).
 
-% Import ts_actor
--import(tsm).
-
 
 
 % Creates a new tuple space with Name
 new(Name) ->
-	register(Name, spawn(ts_actor, init, [])),
+	global:register_name(Name, spawn(node(), tsm, init, [])),
 	io:format("New tuple space created: ~p\n", [Name]),
 	addNode(Name, self()),
 	ok
@@ -46,14 +46,14 @@ rd(TS, Pattern) ->
 
 % Write Tuple in the tuple space TS
 out(TS, Tuple) ->
-	TS!{out, self(), Tuple},
+	global:whereis_name(TS)!{out, self(), Tuple},
 	ok
 .
 
 % Read Pattern from the tuple space TS (desctructive)
 in(TS, Pattern, Timeout) ->
 	% Send in request
-	TS!{in, self(), Pattern},
+	global:whereis_name(TS)!{in, self(), Pattern},
 
 	% Wait for message
 	receive
@@ -66,7 +66,7 @@ in(TS, Pattern, Timeout) ->
 % Read Pattern from the tuple space TS (non-desctructive)
 rd(TS, Pattern, Timeout) ->
 	% Send in request
-	TS!{rd, self(), Pattern},
+	global:whereis_name(TS)!{rd, self(), Pattern},
 
 	% Wait for message
 	receive
@@ -82,22 +82,22 @@ rd(TS, Pattern, Timeout) ->
 % Add Node to the TS, so Node can access to all tuples of TS
 addNode(TS, Node) ->
 	% Send in request
-	TS!{add_node, Node},
+	global:whereis_name(TS)!{add_node, self(), Node}
 .
 
 % Remove Node from the TS
 removeNode(TS, Node) ->
 	% Send in request
-	TS!{remove_node, Node},
+	global:whereis_name(TS)!{remove_node, self(), Node}
 .
 
 % Get list of nodes who can access to the tuple space
 nodes(TS) ->
 	% Send nodes request
-	TS!{nodes, self()}
-
-	% Wait for result
+	global:whereis_name(TS)!{nodes, self()},
 	receive
-		{nodes, List} -> todo
+		{ok, List} -> List
+	after
+		5000 -> {err, timeout}
 	end
 .

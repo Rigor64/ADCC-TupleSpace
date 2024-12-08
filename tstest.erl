@@ -5,7 +5,7 @@
 ]).
 
 % Module to test
--import(ts).
+%-import(ts).
 
 
 
