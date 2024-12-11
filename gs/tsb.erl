@@ -4,7 +4,7 @@
 -export([init/1, handle_call/3, handle_cast/2]).
 
 % Init server state
-init(Args) ->
+init({Name}) ->
 	% Enable trap_exit management
 	erlang:process_flag(trap_exit, true),
 	
@@ -12,7 +12,7 @@ init(Args) ->
 
 	% Obtain reference for tables
 	% Create DETS for filesystem sync
-	%SyncFileRef = dets:open_file(),
+	SyncFileRef = dets:open_file(Name),
 
 	% Create ETS whitelist
 	WhiteListRef = ets:new(whitelist, [set, private]),
@@ -22,32 +22,40 @@ init(Args) ->
 	% Create WaitQueue for blocking reads
 	WaitQueue = [],
 
-	{ok, {WhiteListRef, TupleSpaceRef, WaitQueue}}
+	{ok, {SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}}
 .
 
 
 
 % Define sync endpoints behaviors
-handle_call({in, Pattern}, From, {WhiteListRef, TupleSpaceRef, WaitQueue}) ->
-	{reply, {ok, State}, State};
+handle_call({in, Pattern}, From, {SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}) ->
+	{reply, {ok}, {SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}};
 
-handle_call({rd, Pattern}, From, {WhiteListRef, TupleSpaceRef, WaitQueue}) ->
-	{reply, {ok, State}, State};
+handle_call({rd, Pattern}, From, {SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}) ->
+	{reply, {ok}, {SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}};
 
-handle_call({nodes}, From, {WhiteListRef, TupleSpaceRef, WaitQueue}) ->
-	{reply, {ok, State}, State}
+handle_call({nodes}, _From, {SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}) ->
+	Acc = ets:foldr(
+		fun({Elem}, Acc) ->
+			Acc ++ [Elem]	
+		end,
+		[],
+		WhiteListRef
+	),
+	
+	{reply, {ok, Acc}, {SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}}
 .
 
 % Define async endpoints behaviors
-handle_cast({out, Tuple}, {WhiteListRef, TupleSpaceRef, WaitQueue}) ->
-	{noreply, State};
+handle_cast({out, Tuple}, {SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}) ->
+	{noreply, {SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}};
 
-handle_cast({add_node, Node}, {WhiteListRef, TupleSpaceRef, WaitQueue}) ->
-	{reply, {ok, State}, {WhiteListRef, TupleSpaceRef, WaitQueue}};
+handle_cast({add_node, Node}, {SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}) ->
+	{reply, {SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}};
 
-handle_cast({rm_node, Node}, {WhiteListRef, TupleSpaceRef, WaitQueue}) ->
-	{reply, {ok, State}, {WhiteListRef, TupleSpaceRef, WaitQueue}};
+handle_cast({rm_node, Node}, {SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}) ->
+	{reply, {SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}};
 
-handle_cast({stop}, {WhiteListRef, TupleSpaceRef, WaitQueue}) ->
-	{noreply, {WhiteListRef, TupleSpaceRef, WaitQueue}}
+handle_cast({stop}, {SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}) ->
+	{noreply, {SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}}
 .

@@ -59,48 +59,48 @@ new(Name) ->
 
 % Read Pattern from the tuple space TS (desctructive)
 in(TS, Pattern) -> % Use matching specification
-	gen_server:call(TS, {in, Pattern}, infinity)
+	gen_server:call({global, TS}, {in, Pattern}, infinity)
 .
 
 % Read Pattern from the tuple space TS (desctructive)
 in(TS, Pattern, Timeout) ->
-	gen_server:call(TS, {in, Pattern}, Timeout)
+	gen_server:call({global, TS}, {in, Pattern}, Timeout)
 .
 
 
 
 % Read Pattern from the tuple space TS (non-desctructive)
 rd(TS, Pattern) -> % Use matching specification
-	gen_server:call(TS, {rd, Pattern}, infinity)
+	gen_server:call({global, TS}, {rd, Pattern}, infinity)
 .
 
 % Read Pattern from the tuple space TS (non-desctructive)
 rd(TS, Pattern, Timeout) ->
-	gen_server:call(TS, {rd, Pattern}, Timeout)
+	gen_server:call({global, TS}, {rd, Pattern}, Timeout)
 .
 
 
 
 % Write Tuple in the tuple space TS
 out(TS, Tuple) ->
-	gen_server:cast(TS, {out, Tuple})
+	gen_server:cast({global, TS}, {out, Tuple})
 .
 
 
 
 % Add Node to the TS, so Node can access to all tuples of TS
 addNode(TS, Node) ->
-	gen_server:cast(TS, {add_node, Node})
+	gen_server:cast({global, TS}, {add_node, Node})
 .
 
 % Remove Node from the TS
 removeNode(TS, Node) ->
-	gen_server:cast(TS, {rm_node, Node})
+	gen_server:cast({global, TS}, {rm_node, Node})
 .
 
 % Get list of nodes who can access to the tuple space
 nodes(TS) ->
-	gen_server:call(TS, {nodes}, 5000)
+	gen_server:call({global, TS}, {nodes})
 .
 
 
