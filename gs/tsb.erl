@@ -60,7 +60,7 @@ handle_call({wq}, From, {SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}) -
 handle_call({in, Pattern}, From, {SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}) ->
     {Pid, _} = From,
     Present = inWhiteList(WhiteListRef, Pid),
-    io:format("DEBUG PRINT - inWhiteList (in) (~p)\n", [Present]),
+    %io:format("DEBUG PRINT - inWhiteList (in) (~p)\n", [Present]),
     case Present of
         % If autorized try to read and wait otherwise
         true ->
@@ -153,10 +153,10 @@ removeFromWhiteList(WhiteListRef, Node) ->
 
 removePendingRequests(WaitQueue, Node) ->
     ClearedQueue = lists:foldr(
-        fun({_Type, Pid, _Pattern, _Timeout}, Acc) ->
+        fun({_Type, {Pid, _Tag}, _Pattern}, Acc) ->
             case Pid of
                 Node -> Acc;
-                _ -> Acc ++ [{_Type, Pid, _Pattern, _Timeout}]
+                _ -> Acc ++ [{_Type, {Pid, _Tag}, _Pattern}]
             end
         end,
         [],
@@ -179,7 +179,7 @@ processPendingRequests({SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}) ->
 	NewWaitQueue
 .
 
-tryProcessRequest({Type, {Pid, Tag}, Pattern}, {SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}) ->
+tryProcessRequest({Type, {Pid, Tag}, Pattern}, {_SyncFileRef, _WhiteListRef, TupleSpaceRef, WaitQueue}) ->
     % Control  on Pattern Matching
     Res = ets:match_object(TupleSpaceRef, {Pattern}), % MS
     case Res of
