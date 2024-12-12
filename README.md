@@ -48,7 +48,12 @@ Oltre alle prescritte funzioni, vi è anche la possibilità di procedere alla **
 
 <br />
 <div align="center">
-    <img src="https://github.com/Rigor64/flutter_moviequeue/blob/faf48250509a00ae7a89845d4b1cf0c6bf43838d/moviequeue/images/Screenshot%202024-01-29%20112951.png" alt="Screen1" width="900" height="500">
+    <img src="data/TSM_process.png" alt="Screen1" width="900" height="500">
+</div>
+<br />
+<br />
+<div align="center">
+    <img src="data/TSM_process.png" alt="Screen1" width="900" height="500">
 </div>
 <br />
 
