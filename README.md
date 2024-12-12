@@ -57,6 +57,7 @@ Oltre alle prescritte funzioni, vi è anche la possibilità di procedere alla **
 <!-- MODULI -->
 ### MODULI
 
+
 * Modulo `tsm`: Tuple-Space Manager per gestire l'inizializzazione delle tabelle ETS e l'interfaccia del server.
 
 * Modulo `ts`: nodi figli che ereditano la funzione `init()` del padre.
@@ -76,23 +77,32 @@ ETS private, così da non esporre le tabelle ai nodi esterni
 
 ### FUNZIONI
 
-* `new(Name)`: crea un nuovo Tuple Space
-* `in()`
+* `new(Name)` : crea un nuovo Tuple Space
+
+* `in(TS, Pattern, Timeout)` : operazione di lettura dal Tuple Space, con eliminazione dell'elemento dalla tabella. Viene passato un valore di Timeout per scartare l'operazione in caso di mancata risposta. Se nel Tuple Space non è presente il Pattern specificato, la richiesta di lettura viene aggiunta alla Wait Queue.
+* `in(TS, Pattern)` : funzione precedente, con `Timeout = infinity`
+* `rd(TS, Pattern, Timeout)` : operazione di lettura dal Tuple Space. Viene passato un valore di Timeout per scartare l'operazione in caso di mancata risposta. Se nel Tuple Space non è presente il Pattern specificato, la richiesta di lettura viene aggiunta alla Wait Queue.
+* `rd(TS, Pattern)` : funzione precedente, con `Timeout = infinity`
+* `out(TS, Pattern)` : operazione di scrittura sul Tuple Space che, una volta eseguita, effettua un controllo sulla Wait Queue per verificare che ci siano richieste pendenti da poter soddisfare.
+
+* `addNode(TS, Node)` : viene creato un link tra il processo invocante ed il gestore dello spazio di tuple, il quale registrerà il Pid dell'invocante all'interno della propria White List.
+* `removeNode(TS, Node)` : viene eliminato il link con il gestore dello spazio di tuple, il nodo viene rimosso dalla White List e vengono eliminate tutte le richieste di `in` o `rd` relative a quel nodo.
+* `nodes(TS, Node)` : elenco di tutti gli elementi contenuti nella White List.
 
 <br />
 <div align="center">
     <img src="data/TSM_process.png" alt="Screen1" width="900" height="500">
 </div>
 <br />
+
+* TrapExit: è stato implemenatto per tutelare il Server Tuple Space dalla caduta di un eventuale link non autorizzato
+
 <br />
 <div align="center">
     <img src="data/TSM_server_in_function.png" alt="Screen1" width="500" height="650">
 </div>
 <br />
 
-* TrapExit: è stato implemenatto per tutelare il Server Tuple Space dalla caduta di un eventuale link non autorizzato
-
-* add_node : non ha un controllo sugli accessi poichè se un nodo muore non potrebbe più linkarsi al tuple space a cui era apparteneva
 
 * removeNode : viene rimosso il link tra nodo padre e figlio, questo ritorna un messaggio di EXIT a entrambi, quindi viene eliminato il nodo dalla WhiteList. Il nodo muori poichè ha ricevuto il messaggio di EXIT
 
