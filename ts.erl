@@ -33,13 +33,13 @@ new(Name) ->
 .
 
 % Read Pattern from the tuple space TS (desctructive)
-in(TS, Pattern) ->
+in(TS, Pattern) -> % Use matching specification
 	Ret = in(TS, Pattern, infinity),
 	Ret
 .
 
 % Read Pattern from the tuple space TS (non-desctructive)
-rd(TS, Pattern) ->
+rd(TS, Pattern) -> % Use matching specification
 	Ret = rd(TS, Pattern, infinity),
 	Ret
 .
