@@ -66,12 +66,10 @@ Oltre alle prescritte funzioni, vi è anche la possibilità di procedere alla **
 
 ### DATASET
 
-ETS private, così da non esporre le tabelle ai nodi esterni
+* Abbiamo implementato due tabelle ETS private, così da non esporre le tabelle ai nodi esterni:
 
-* Abbiamo implementato due tabelle ETS:
-
-  * WhiteList (WL) : ETS per Pid autorizzati all'accesso. Tipologia set perchè contiene solo Pid e quest'ultimo è univoco, quindi lo utilizziamo come chiave
-  * Space : ETS per la gestione dello spazio di tuple. Tipologia duplicate_bag per avere tuple duplicate e chiavi non univoche.
+  * WhiteList (WL) : registrazione dei Pid autorizzati all'accesso. Il Pid viene utilizzato come chiave data la natura del dato.
+  * Tuple Space (TS) : gestore dello spazio di tuple. Tipologia duplicate_bag per avere tuple duplicate e chiavi non univoche.
 
 * WaitQueue : Lista temporanea per i messaggi in attesa (in , rd)
 
@@ -103,35 +101,10 @@ ETS private, così da non esporre le tabelle ai nodi esterni
 </div>
 <br />
 
-
-* removeNode : viene rimosso il link tra nodo padre e figlio, questo ritorna un messaggio di EXIT a entrambi, quindi viene eliminato il nodo dalla WhiteList. Il nodo muori poichè ha ricevuto il messaggio di EXIT
-
 <p align="right">(<a href="#readme-top">Torna su</a>)</p>
 
 <!-- STRESS TEST -->
 ## Stress Test Result
-
-<style>
-#customers {
-  font-family: Arial, Helvetica, sans-serif;
-  border-collapse: collapse;
-  width: 100%;
-}
-#customers td, #customers th {
-  color: black;
-  border: 1px solid #ddd;
-  padding: 8px;
-}
-#customers tr:nth-child(even){background-color: #f2f2f2;}
-#customers tr:hover {background-color: #ddd;}
-#customers th {
-  padding-top: 12px;
-  padding-bottom: 12px;
-  text-align: left;
-  background-color: #04AA6D;
-  color: white;
-}
-</style>
 
 <table id = "customers">
 <tr>
@@ -149,12 +122,3 @@ ETS private, così da non esporre le tabelle ai nodi esterni
 1. Provare a rimuovere un Ts_actor e vedere se è ancora vivo.
 
 2. Etteffuare una batteria di test per ogni operazione (in, rd, out).
-
-<!-- TECNOLOGIA -->
-## Tecnologia
-<!-- DEPENDANCES -->
-### Dependances
-
-```erl
-% codice
-```
