@@ -1,11 +1,12 @@
 -module(tstest).
 -export([
+    avgTimeIN/2,
+    avgTimeRD/2,
+    avgTimeOUT/2,
+
 	testBattery_IO_seq/2,
 	testBattery_IO_conc/2
 ]).
-
-% Module to test
-%-import(ts).
 
 
 
