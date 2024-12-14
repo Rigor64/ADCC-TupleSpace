@@ -28,7 +28,7 @@
   </ol>
 </details>
 
-<!-- DESCRIZIONE DEL PROGETTO -->
+<!-- DESCRIZIONE DEL PROGETTO --> 
 ## Descrizione del progetto
 
 Il progetto si propone di implementare uno **Spazio di Tuple** (Tuple Space - **TS**), ovvero un'astrazione di memoria condivisa, in cui i vari processi possono interagire mediante condivisione di messaggi (message-passing).
@@ -46,17 +46,18 @@ Oltre alle prescritte funzioni, vi è anche la possibilità di procedere alla **
 <!-- SCELTE IMPLEMENTATIVE -->
 ## Scelte implementative
 
- MATCH SPECIFICATIONS: Il Pattern da seguire per poter inserire un record nel Tuple Space è il seguente:
+* MATCH SPECIFICATIONS: Il Pattern da seguire per poter inserire un record nel Tuple Space è il seguente:
 
-```erl
-  {'$1','$2', atomo, '$3'}
-  % oppure
-  {'_', '_', atomo, '_'}
-```
+  ```erl
+    {'$1','$2', atomo, '$3'}
+    % oppure
+    {'_', '_', atomo, '_'}
+  ```
+
+* TrapExit: è stato implemenatto per tutelare il Server Tuple Space dalla caduta di un eventuale link non autorizzato
 
 <!-- MODULI -->
 ### MODULI
-
 
 * Modulo `tsm`: Tuple-Space Manager per gestire l'inizializzazione delle tabelle ETS e l'interfaccia del server.
 
@@ -68,10 +69,10 @@ Oltre alle prescritte funzioni, vi è anche la possibilità di procedere alla **
 
 * Abbiamo implementato due tabelle ETS private, così da non esporre le tabelle ai nodi esterni:
 
-  * WhiteList (WL) : registrazione dei Pid autorizzati all'accesso. Il Pid viene utilizzato come chiave data la natura del dato.
-  * Tuple Space (TS) : gestore dello spazio di tuple. Tipologia duplicate_bag per avere tuple duplicate e chiavi non univoche.
+  * **WhiteList (WL)** : registrazione dei Pid autorizzati all'accesso. Il Pid viene utilizzato come chiave data la natura del dato.
+  * **Tuple Space (TS)** : gestore dello spazio di tuple. Tipologia duplicate_bag per avere tuple duplicate e chiavi non univoche.
 
-* WaitQueue : Lista temporanea per i messaggi in attesa (in , rd)
+* **WaitQueue** : Lista temporanea per i messaggi in attesa (in , rd)
 
 ### FUNZIONI
 
@@ -93,7 +94,7 @@ Oltre alle prescritte funzioni, vi è anche la possibilità di procedere alla **
 </div>
 <br />
 
-* TrapExit: è stato implemenatto per tutelare il Server Tuple Space dalla caduta di un eventuale link non autorizzato
+
 
 <br />
 <div align="center">
