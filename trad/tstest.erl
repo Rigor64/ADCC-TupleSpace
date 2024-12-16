@@ -15,9 +15,9 @@ avgTimeIN(TS, N) ->
 
 	Times = lists:map(
 		fun (E) ->
-			Tin = erlang:system_time(),
+			Tin = erlang:system_time(microsecond),
 			ts:in(TS, {pattern, E}),
-			Tout = erlang:system_time(),
+			Tout = erlang:system_time(microsecond),
 			T = Tout - Tin,
 			T
 		end,
@@ -30,7 +30,7 @@ avgTimeIN(TS, N) ->
 
 	AvgTime = Sum / Total,
 
-	io:format("Avg time (IN): ~p", [AvgTime])
+	io:format("Avg time (IN): ~p us\n", [AvgTime])
 .
 
 avgTimeRD(TS, N) ->
@@ -38,9 +38,9 @@ avgTimeRD(TS, N) ->
 
 	Times = lists:map(
 		fun (E) ->
-			Tin = erlang:system_time(),
+			Tin = erlang:system_time(microsecond),
 			ts:rd(TS, {pattern, E}),
-			Tout = erlang:system_time(),
+			Tout = erlang:system_time(microsecond),
 			T = Tout - Tin,
 			T
 		end,
@@ -53,7 +53,7 @@ avgTimeRD(TS, N) ->
 
 	AvgTime = Sum / Total,
 
-	io:format("Avg time (RD): ~p", [AvgTime])
+	io:format("Avg time (RD): ~p us\n", [AvgTime])
 .
 
 avgTimeOUT(TS, N) ->
@@ -61,9 +61,9 @@ avgTimeOUT(TS, N) ->
 
 	Times = lists:map(
 		fun (E) ->
-			Tin = erlang:system_time(),
+			Tin = erlang:system_time(microsecond),
 			ts:out(TS, {pattern, E}),
-			Tout = erlang:system_time(),
+			Tout = erlang:system_time(microsecond),
 			T = Tout - Tin,
 			T
 		end,
@@ -76,7 +76,7 @@ avgTimeOUT(TS, N) ->
 
 	AvgTime = Sum / Total,
 
-	io:format("Avg time (IN): ~p", [AvgTime])
+	io:format("Avg time (OUT): ~p us\n", [AvgTime])
 .
 
 

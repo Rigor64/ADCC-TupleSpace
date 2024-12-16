@@ -23,7 +23,7 @@
 
 % Creates a new tuple space with Name
 new(Name) ->
-    global:register_name(Name, spawn(node(), tsm, init, [])),
+    global:register_name(Name, spawn(node(), tsm, init, [atom_to_list(Name)])),
     io:format("New tuple space created: ~p\n", [Name]),
     addNode(Name, self()),
     ok
