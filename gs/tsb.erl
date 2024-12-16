@@ -52,9 +52,9 @@ handle_info({'EXIT', Pid, _Reason}, {SyncFileRef, WhiteListRef, TupleSpaceRef, W
 
 %%% Define sync endpoints behaviors
 %%% TEST
-handle_call({list}, From, {SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}) ->
+handle_call({list}, _From, {SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}) ->
     {reply, {ets:tab2list(TupleSpaceRef)}, {SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}};
-handle_call({wq}, From, {SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}) ->
+handle_call({wq}, _From, {SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}) ->
     {reply, {WaitQueue}, {SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}};
 %%%
 handle_call({in, Pattern}, From, {SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}) ->
