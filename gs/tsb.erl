@@ -11,7 +11,7 @@
 
 
 %%% Init server state
-init([Name]) ->
+init([Name, Supervisor]) ->
     % Enable trap_exit management
     erlang:process_flag(trap_exit, true),
     
@@ -30,34 +30,39 @@ init([Name]) ->
     % Create WaitQueue for blocking reads
     WaitQueue = [],
 
-    {ok, {SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}}
+    io:format("Gen Server - START\n", []),
+
+    {ok, {Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}}
 .
 
 
 
 %%% Handle infos
-handle_info(timeout, {SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}) ->
+handle_info(timeout, {Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}) ->
+    io:format("Gen Server - HYBERNATE\n", []),
+
     % Handle dets sync
     ets:to_dets(TupleSpaceRef, SyncFileRef),
+    dets:sync(SyncFileRef),
 
-    {noreply, {SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}, hibernate};
+    {noreply, {Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}, hibernate};
 
-handle_info({'EXIT', Pid, _Reason}, {SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}) ->
+handle_info({'EXIT', Pid, _Reason}, {Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}) ->
     % Handle dets sync
     removeFromWhiteList(WhiteListRef, Pid),
     ClearedQueue = removePendingRequests(WaitQueue, Pid),
 
-    {noreply, {SyncFileRef, WhiteListRef, TupleSpaceRef, ClearedQueue}}
+    {noreply, {Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, ClearedQueue}}
 .
 
 %%% Define sync endpoints behaviors
 %%% TEST
-handle_call({list}, _From, {SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}) ->
-    {reply, {ets:tab2list(TupleSpaceRef)}, {SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}};
-handle_call({wq}, _From, {SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}) ->
-    {reply, {WaitQueue}, {SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}};
+handle_call({list}, _From, {Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}) ->
+    {reply, {ets:tab2list(TupleSpaceRef)}, {Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}};
+handle_call({wq}, _From, {Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}) ->
+    {reply, {WaitQueue}, {Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}};
 %%%
-handle_call({in, Pattern}, From, {SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}) ->
+handle_call({in, Pattern}, From, {Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}) ->
     {Pid, _} = From,
     Present = inWhiteList(WhiteListRef, Pid),
     %io:format("DEBUG PRINT - inWhiteList (in) (~p)\n", [Present]),
@@ -68,9 +73,9 @@ handle_call({in, Pattern}, From, {SyncFileRef, WhiteListRef, TupleSpaceRef, Wait
         false ->
             NewWaitQueue = WaitQueue
     end,
-    {noreply, {SyncFileRef, WhiteListRef, TupleSpaceRef, NewWaitQueue}};
+    {noreply, {Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, NewWaitQueue}};
 
-handle_call({rd, Pattern}, From, {SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}) ->
+handle_call({rd, Pattern}, From, {Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}) ->
     {Pid, _} = From,
     Present = inWhiteList(WhiteListRef, Pid),
     %io:format("DEBUG PRINT - inWhiteList (rd) (~p)\n", [Present]),
@@ -81,10 +86,10 @@ handle_call({rd, Pattern}, From, {SyncFileRef, WhiteListRef, TupleSpaceRef, Wait
         false ->
             NewWaitQueue = WaitQueue
     end,
-    {noreply, {SyncFileRef, WhiteListRef, TupleSpaceRef, NewWaitQueue}};
+    {noreply, {Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, NewWaitQueue}};
 
 % List of connected nodes
-handle_call({nodes}, _From, {SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}) ->
+handle_call({nodes}, _From, {Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}) ->
     Acc = ets:foldr(
         fun({Elem}, Acc) ->
             Acc ++ [Elem]	
@@ -93,11 +98,11 @@ handle_call({nodes}, _From, {SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue
         WhiteListRef
     ),
     
-    {reply, {ok, Acc}, {SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}}
+    {reply, {ok, Acc}, {Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}}
 .
 
 %%% Define async endpoints behaviors
-handle_cast({out, Pid, Tuple}, {SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}) ->
+handle_cast({out, Pid, Tuple}, {Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}) ->
     Present = inWhiteList(WhiteListRef, Pid),
     case Present of 
         % If autorized try to read and wait otherwise
@@ -108,28 +113,33 @@ handle_cast({out, Pid, Tuple}, {SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQu
             NewWaitQueue = WaitQueue
     end,
     
-    {noreply, {SyncFileRef, WhiteListRef, TupleSpaceRef, NewWaitQueue}};
+    {noreply, {Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, NewWaitQueue}};
 
-handle_cast({add_node, Node}, {SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}) ->
+handle_cast({add_node, Node}, {Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}) ->
     % Insert the node in the whitelist
     link(Node),
     ets:insert(WhiteListRef, {Node}),
 
-    {noreply, {SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}};
+    {noreply, {Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}};
 
-handle_cast({rm_node, Node}, {SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}) ->
+handle_cast({rm_node, Node}, {Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}) ->
     unlink(Node),
     removeFromWhiteList(WhiteListRef, Node),
     ClearedQueue = removePendingRequests(WaitQueue, Node),
 
-    {noreply, {SyncFileRef, WhiteListRef, TupleSpaceRef, ClearedQueue}};
+    {noreply, {Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, ClearedQueue}};
 
-handle_cast({abort, {Type, Pid, Pattern}}, {SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}) ->
+handle_cast({abort, {Type, Pid, Pattern}}, {Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}) ->
     NewWaitQueue = abortPendingRequest({Type, Pid, Pattern}, {SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}),
-    {noreply, {SyncFileRef, WhiteListRef, TupleSpaceRef, NewWaitQueue}};
+    {noreply, {Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, NewWaitQueue}};
 
-handle_cast({stop}, {SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}) ->
-    {noreply, {SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}}
+handle_cast({crash}, State) ->
+    exit("Test crash"),
+    {noreply, State};
+
+handle_cast({stop}, {Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}) ->
+    Supervisor!{delete, self()},
+    {stop, "Stopped server", {Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}}
 .
 
 
