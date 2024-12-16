@@ -5,13 +5,11 @@
 
 
 
-
 init(Name) ->
 	{ManagerPid, ManagerRef} = build_manager(Name),
     io:format("Supervisor [~p] - Manager Built\n", [self()]),
 	server(Name, ManagerPid, ManagerRef)
 .
-
 
 server(Name, ManagerPid, ManagerRef) ->
     io:format("Supervisor [~p] - ACTIVE\n", [self()]),
@@ -27,8 +25,8 @@ server(Name, ManagerPid, ManagerRef) ->
 
 % Spawn and monitor the tuple space manager
 build_manager(Name) ->
-	{Pid, Ref} = spawn_monitor(node(), tsm, init, [atom_to_list(Name), self()]),
-	global:register_name(Name, Pid),
+    {ok, Pid} = gen_server:start({global, Name}, tsb, [atom_to_list(Name), self()], [{hibernate_after, 10000}]),
+    Ref = monitor(process, Pid),
     io:format("New tuple space created: ~p\n", [Name]),
     {Pid, Ref}
 .

@@ -1,11 +1,11 @@
 % Tuple-Space Manager module
 -module(tsm).
 -export([
-    init/1
+    init/2
 ]).
 
 % Initializzation function
-init(Name) ->
+init(Name, Supervisor) ->
     % Enable trap_exit management
     erlang:process_flag(trap_exit, true),
     
@@ -21,12 +21,15 @@ init(Name) ->
     % Create ETS space
     TupleSpaceRef = ets:new(space, [set, private]),
 
+    % Retrieve Data
+    dets:to_ets(SyncFileRef, TupleSpaceRef),
+
     % Start server
-    server(SyncFileRef, WhiteListRef, TupleSpaceRef, [])
+    server(Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, [])
 .
 
 % Real TS Server
-server(SyncFileRef, WhiteListRef, TupleSpaceRef, PendingRequestsQueue) ->
+server(Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, PendingRequestsQueue) ->
     %io:format("Debug print - SERVER PID (~p)\n", [self()]),
 
     receive
@@ -34,7 +37,7 @@ server(SyncFileRef, WhiteListRef, TupleSpaceRef, PendingRequestsQueue) ->
         {'EXIT', Pid, _Reason} ->
             removeFromWhiteList(WhiteListRef, Pid),
             NewPendingRequestsQueue = removePendingRequests(PendingRequestsQueue, Pid),
-            server(SyncFileRef, WhiteListRef, TupleSpaceRef, NewPendingRequestsQueue);
+            server(Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, NewPendingRequestsQueue);
 
         % Handle ETS destructive read
         {in, Pid, Pattern} -> 
@@ -47,7 +50,7 @@ server(SyncFileRef, WhiteListRef, TupleSpaceRef, PendingRequestsQueue) ->
                 _ -> 
                     NewPendingRequestsQueue = PendingRequestsQueue
             end,	
-            server(SyncFileRef, WhiteListRef, TupleSpaceRef, NewPendingRequestsQueue);
+            server(Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, NewPendingRequestsQueue);
         
         % Handle ETS non-destructive read
         {rd, Pid, Pattern} -> % Check if is in the white list 
@@ -59,7 +62,7 @@ server(SyncFileRef, WhiteListRef, TupleSpaceRef, PendingRequestsQueue) ->
                 _ -> 
                     NewPendingRequestsQueue = PendingRequestsQueue
             end, 
-            server(SyncFileRef, WhiteListRef, TupleSpaceRef, NewPendingRequestsQueue);
+            server(Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, NewPendingRequestsQueue);
         
         % Abort a specific in/rd request (upon timeout, client will call this)
         {abort, {Type, Pid, Pattern}} -> % Check if is in the white list 
@@ -71,7 +74,7 @@ server(SyncFileRef, WhiteListRef, TupleSpaceRef, PendingRequestsQueue) ->
                 false -> 
                     NewPendingRequestsQueue = PendingRequestsQueue
             end, 
-            server(SyncFileRef, WhiteListRef, TupleSpaceRef, NewPendingRequestsQueue);
+            server(Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, NewPendingRequestsQueue);
 
         % Handle ETS write, PendingRequestsQueue removal
         {out, Pid, Tuple} -> 
@@ -87,43 +90,65 @@ server(SyncFileRef, WhiteListRef, TupleSpaceRef, PendingRequestsQueue) ->
                     %io:format("Debug print - OUT - NOT AUTH (~p)\n", [Present]),
                     NewPendingRequestsQueue = PendingRequestsQueue
             end,
-            server(SyncFileRef, WhiteListRef, TupleSpaceRef, NewPendingRequestsQueue);
+            server(Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, NewPendingRequestsQueue);
 
         % Handle add node
         {add_node, Pid, Node} ->
             addNode(WhiteListRef, Node),
             Pid!{ok},
-            server(SyncFileRef, WhiteListRef, TupleSpaceRef, PendingRequestsQueue);
+            server(Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, PendingRequestsQueue);
 
         % Handle remove node
         {rm_node, Pid, Node} ->
             removeNode(WhiteListRef, Node),
             NewPendingRequestsQueue = removePendingRequests(PendingRequestsQueue, Node),
             Pid!{ok},
-            server(SyncFileRef, WhiteListRef, TupleSpaceRef, NewPendingRequestsQueue);
+            server(Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, NewPendingRequestsQueue);
 
         % Handle node list
         {nodes, Pid} ->
             Pid!{ok, getNodes(WhiteListRef)},
-            server(SyncFileRef, WhiteListRef, TupleSpaceRef, PendingRequestsQueue);
+            server(Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, PendingRequestsQueue);
+
+        {close, Pid} -> 
+            Present = inWhiteList(WhiteListRef, Pid),
+            %io:format("Debug print - OUT (~p)\n", [Tuple]),
+            %io:format("Debug print - OUT - inWhiteList (~p)\n", [Present]),
+            case Present of 
+                % If autorized try to read and wait otherwise
+                true ->
+                    Supervisor!{delete, self()},
+                    dets:close(SyncFileRef);
+                false ->
+                    server(Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, PendingRequestsQueue)
+            end;
 
         %%%%%%%%
         % Test %
         %%%%%%%%
+        {test_crash} ->
+            exit("Test exit");
+
         {list, Pid} ->
             Pid!{okpatato, ets:tab2list(TupleSpaceRef)},
-            server(SyncFileRef, WhiteListRef, TupleSpaceRef, PendingRequestsQueue);
+            server(Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, PendingRequestsQueue);
         
         {wq, Pid} ->
             Pid!{waitqueue, PendingRequestsQueue},
-            server(SyncFileRef, WhiteListRef, TupleSpaceRef, PendingRequestsQueue);
+            server(Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, PendingRequestsQueue);
         
         {wl, Pid} ->
             Pid!{inWhiteList(WhiteListRef, Pid)},
-            server(SyncFileRef, WhiteListRef, TupleSpaceRef, PendingRequestsQueue);
+            server(Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, PendingRequestsQueue);
 
         % Wildcard for remove trash messages
-        _ -> server(SyncFileRef, WhiteListRef, TupleSpaceRef, PendingRequestsQueue)
+        _ -> server(Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, PendingRequestsQueue)
+    
+    after
+        10000 ->
+            ets:to_dets(TupleSpaceRef, SyncFileRef),
+            dets:sync(SyncFileRef),
+            server(Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, PendingRequestsQueue)
     end
 .
 

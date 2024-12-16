@@ -23,9 +23,7 @@
 
 % Creates a new tuple space with Name
 new(Name) ->
-    global:register_name(Name, spawn(node(), tsm, init, [atom_to_list(Name)])),
-    io:format("New tuple space created: ~p\n", [Name]),
-    addNode(Name, self()),
+    spawn(node(), tss, init, [Name]),
     ok
 .
 
@@ -89,7 +87,7 @@ addNode(TS, Node) ->
 % Remove Node from the TS
 removeNode(TS, Node) ->
     % Send in request
-    global:whereis_name(TS)!{remove_node, self(), Node}
+    global:whereis_name(TS)!{rm_node, self(), Node}
 .
 
 % Get list of nodes who can access to the tuple space

@@ -20,38 +20,16 @@
 
     % Testing
     list/1,
-    wq/1
+    wq/1,
+    crash/1
 ]).
 
 
-%init(Name) ->
-%	% Enable trap_exit management
-%	erlang:process_flag(trap_exit, true),
-%
-%	% Start server
-%	gen_server:start_link({global, Name}, tsb, [], []),
-%
-%	supervise(Name)
-%.
-%
-%supervise(Name) ->
-%	receive
-%		{'EXIT', _Pid, _Reason} ->
-%			gen_server:start_link({global, Name}, tsb, [], []),
-%			supervise(Name)
-%	end
-%.
-
-
-%%%
-%%%
-%%%
 
 % Creates a new tuple space with Name
 new(Name) ->
-    gen_server:start({global, Name}, tsb, [atom_to_list(Name)], [{hibernate_after, 10000}]),
-    io:format("New tuple space created: ~p\n", [Name]),
-    addNode(Name, self())
+    spawn(node(), tss, init, [Name]),
+    ok
 .
 
 
@@ -156,3 +134,5 @@ nodes(TS) ->
 
 list(TS) -> gen_server:call({global, TS}, {list}).
 wq(TS) -> gen_server:call({global, TS}, {wq}).
+
+crash(TS) -> gen_server:cast({global, TS}, {crash}).
