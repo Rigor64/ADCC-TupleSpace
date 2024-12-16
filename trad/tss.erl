@@ -1,25 +1,34 @@
 -module(tss).
 -export([
-
+    init/1
 ]).
 
 
 
 
 init(Name) ->
-	ManagerPid = build_manager(Name),
-	server(Name, ManagerPid)
+	{ManagerPid, ManagerRef} = build_manager(Name),
+    io:format("Supervisor [~p] - Manager Built\n", [self()]),
+	server(Name, ManagerPid, ManagerRef)
 .
 
 
-server(Name, ManagerPid) ->
+server(Name, ManagerPid, ManagerRef) ->
+    io:format("Supervisor [~p] - ACTIVE\n", [self()]),
 	receive
-		{'DOWN', MonitorRef, process, Object, _Info} -> NewManagerPid = build_manager(Name), server(Name, NewManagerPid),
-        {delete, ManagerPid}
+		{'DOWN', _MonitorRef, process, _Object, _Info} ->
+            {NewManagerPid, NewManagerRef} = build_manager(Name),
+            server(Name, NewManagerPid, NewManagerRef);
+        
+        {delete, ManagerPid} ->
+            demonitor(ManagerRef)
 	end
 .
 
+% Spawn and monitor the tuple space manager
 build_manager(Name) ->
-	{Pid, _Ref} = spawn_monitor(node(), tsm, init, Name),
-	global:register_name(Name, Pid)
+	{Pid, Ref} = spawn_monitor(node(), tsm, init, [atom_to_list(Name), self()]),
+	global:register_name(Name, Pid),
+    io:format("New tuple space created: ~p\n", [Name]),
+    {Pid, Ref}
 .
