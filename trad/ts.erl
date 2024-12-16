@@ -1,7 +1,7 @@
-% Module definition
+% Tuple Space Module Definition
 -module(ts).
 
-% Export all invokable functions
+% Export all invocable functions
 -export([
     % Interfaces 1/3
     new/1,
@@ -21,31 +21,34 @@
 
 
 
-% Creates a new tuple space with Name
+% Create a new tuple space with a specified Name
 new(Name) ->
     spawn(node(), tss, init, [Name]),
     ok
 .
 
-% Read Pattern from the tuple space TS (desctructive)
+% Read a matching Pattern from the tuple space TS (destructive)
+% a blocking read operation with no timeout specification 
 in(TS, Pattern) -> % Use matching specification
     Ret = in(TS, Pattern, infinity),
     Ret
 .
 
-% Read Pattern from the tuple space TS (non-desctructive)
+% Read a matching Pattern from the tuple space TS (non-destructive)
+% a blocking read operation with no timeout specification 
 rd(TS, Pattern) -> % Use matching specification
     Ret = rd(TS, Pattern, infinity),
     Ret
 .
 
-% Write Tuple in the tuple space TS
+% Write Tuple into the tuple space TS
 out(TS, Tuple) ->
     global:whereis_name(TS)!{out, self(), Tuple},
     ok
 .
 
-% Read Pattern from the tuple space TS (desctructive)
+% Read a matching Pattern from the tuple space TS (destructive) with timeout specification
+% if there's no match and the timeout expires, the function will return an error
 in(TS, Pattern, Timeout) ->
     % Send in request
     global:whereis_name(TS)!{in, self(), Pattern},
@@ -60,7 +63,8 @@ in(TS, Pattern, Timeout) ->
     end
 .
 
-% Read Pattern from the tuple space TS (non-desctructive)
+% Read a matching Pattern from the tuple space TS (non-destructive)
+% if there's not a matching and the timeout runs out, then the function returns an error 
 rd(TS, Pattern, Timeout) ->
     % Send in request
     global:whereis_name(TS)!{rd, self(), Pattern},
@@ -78,19 +82,20 @@ rd(TS, Pattern, Timeout) ->
 
 
 
-% Add Node to the TS, so Node can access to all tuples of TS
+% Add the Node to the TS, the node now has access to all tuples int the TS
 addNode(TS, Node) ->
     % Send in request
     global:whereis_name(TS)!{add_node, self(), Node}
 .
 
-% Remove Node from the TS
+% Remove the Node from the TS
 removeNode(TS, Node) ->
     % Send in request
     global:whereis_name(TS)!{rm_node, self(), Node}
 .
 
-% Get list of nodes who can access to the tuple space
+% Get a list of all nodes that have access to the tuple space
+% the function will return an error if the timeout is exceeded
 nodes(TS) ->
     % Send nodes request
     global:whereis_name(TS)!{nodes, self()},

@@ -1,30 +1,33 @@
-% Tuple-Space Manager module
+% Tuple-Space Manager Module Definition
 -module(tsm).
+
+% Export all invocable functions
 -export([
     init/2
 ]).
 
-% Initializzation function
+
+% Initialization function
 init(Name, Supervisor) ->
     % Enable trap_exit management
     erlang:process_flag(trap_exit, true),
     
     %io:format("Debug print - INIT PID (~p)\n", [self()]),
 
-    % Obtain reference for tables
-    % Create DETS for filesystem sync
+    % Obtain a reference for tables
+    % Create DETS for filesystem synchronization
     DetsPath = Name,
     {ok, SyncFileRef} = dets:open_file(DetsPath, []),
 
-    % Create ETS whitelist
+    % Create an ETS: whitelist
     WhiteListRef = ets:new(whitelist, [set, private]),
-    % Create ETS space
+    % Create an ETS: space
     TupleSpaceRef = ets:new(space, [set, private]),
 
-    % Retrieve Data
+    % Retrieve data
     dets:to_ets(SyncFileRef, TupleSpaceRef),
 
-    % Start server
+    % Start the server
     server(Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, [])
 .
 
@@ -41,10 +44,11 @@ server(Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, PendingRequestsQueu
 
         % Handle ETS destructive read
         {in, Pid, Pattern} -> 
-            % Check if is in the white list 
+            % Check if the PID is present in the whitelist (authorized node)
             Present = true,%inWhiteList(WhiteListRef, Pid),
             case Present of 
-                % If autorized try to read and wait otherwise
+                % If it's authorized, try the read operation (if there's a match); 
+                % otherwise, wait 
                 true ->
                     NewPendingRequestsQueue = tryProcessRequest(TupleSpaceRef, {in, Pid, Pattern}, PendingRequestsQueue);
                 _ -> 
@@ -53,10 +57,12 @@ server(Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, PendingRequestsQueu
             server(Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, NewPendingRequestsQueue);
         
         % Handle ETS non-destructive read
-        {rd, Pid, Pattern} -> % Check if is in the white list 
+        {rd, Pid, Pattern} -> 
+            % Check if the PID is present in the whitelist (authorized node)
             Present = inWhiteList(WhiteListRef, Pid),
             case Present of 
-                % If autorized try to read and wait otherwise
+                % If it's authorized, try the read operation (if there's a match); 
+                % otherwise, wait 
                 true ->
                     NewPendingRequestsQueue = tryProcessRequest(TupleSpaceRef, {rd, Pid, Pattern}, PendingRequestsQueue);
                 _ -> 
@@ -64,11 +70,13 @@ server(Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, PendingRequestsQueu
             end, 
             server(Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, NewPendingRequestsQueue);
         
-        % Abort a specific in/rd request (upon timeout, client will call this)
-        {abort, {Type, Pid, Pattern}} -> % Check if is in the white list 
+        % Abort a specific in/rd request (the client will call this upon timeout)
+        {abort, {Type, Pid, Pattern}} ->  
+            % Check if the PID is present in the whitelist (authorized node)
             Present = inWhiteList(WhiteListRef, Pid),
             case Present of 
-                % If autorized try to read and wait otherwise
+                % If it's authorized, try the read operation (if there's a match); 
+                % otherwise, wait 
                 true ->
                     NewPendingRequestsQueue = abortPendingRequest({Type, Pid, Pattern}, PendingRequestsQueue);
                 false -> 
@@ -78,11 +86,13 @@ server(Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, PendingRequestsQueu
 
         % Handle ETS write, PendingRequestsQueue removal
         {out, Pid, Tuple} -> 
+            % Check if the PID is present in the whitelist (authorized node)
             Present = inWhiteList(WhiteListRef, Pid),
             %io:format("Debug print - OUT (~p)\n", [Tuple]),
             %io:format("Debug print - OUT - inWhiteList (~p)\n", [Present]),
             case Present of 
-                % If autorized try to read and wait otherwise
+                % If it's authorized, write the tuple to the TS;
+                % otherwise, wait 
                 true ->
                     _InsertRes = ets:insert(TupleSpaceRef, {Tuple}),
                     NewPendingRequestsQueue = processPendingRequests(TupleSpaceRef, PendingRequestsQueue);
@@ -92,30 +102,33 @@ server(Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, PendingRequestsQueu
             end,
             server(Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, NewPendingRequestsQueue);
 
-        % Handle add node
+        % Handle the add node function
         {add_node, Pid, Node} ->
             addNode(WhiteListRef, Node),
             Pid!{ok},
             server(Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, PendingRequestsQueue);
 
-        % Handle remove node
+        % Handle the remove node function 
         {rm_node, Pid, Node} ->
             removeNode(WhiteListRef, Node),
             NewPendingRequestsQueue = removePendingRequests(PendingRequestsQueue, Node),
             Pid!{ok},
             server(Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, NewPendingRequestsQueue);
 
-        % Handle node list
+        % Handle the nodes list
         {nodes, Pid} ->
             Pid!{ok, getNodes(WhiteListRef)},
             server(Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, PendingRequestsQueue);
 
+        % Handle the closing node function
         {close, Pid} -> 
+            % Check if the PID is present in the whitelist (authorized node)
             Present = inWhiteList(WhiteListRef, Pid),
             %io:format("Debug print - OUT (~p)\n", [Tuple]),
             %io:format("Debug print - OUT - inWhiteList (~p)\n", [Present]),
             case Present of 
-                % If autorized try to read and wait otherwise
+                % If it's authorized, delete the current process and 
+                % close the DETS 
                 true ->
                     Supervisor!{delete, self()},
                     dets:close(SyncFileRef);
@@ -126,6 +139,8 @@ server(Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, PendingRequestsQueu
         %%%%%%%%
         % Test %
         %%%%%%%%
+
+        % test if the TS is restored after a crash (termination of the process)
         {test_crash} ->
             exit("Test exit");
 
