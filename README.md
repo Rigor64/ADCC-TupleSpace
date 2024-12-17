@@ -150,7 +150,7 @@ Le operazioni di lettura e struttura devono sottostare ad un certo pattern da se
 
 <br />
 <div align="center">
-    <img src="data/TSM_server_in_function.png" alt="Screen1" width="500" height="650">
+    <img src="data/TSM_server_in_function.png" alt="Screen1" width="650" height="650">
 </div>
 <br />
 
