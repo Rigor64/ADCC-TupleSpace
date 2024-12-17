@@ -69,7 +69,7 @@ in(TS, Pattern, Timeout) ->
     end
 .
 
-% Read a matching Pattern from the tuple space TS (non-destructive)
+% Read a matching Pattern from the tuple space TS (non-destructive) with timeout specification
 % if no match is found and the timeout expires, the function returns an error 
 rd(TS, Pattern, Timeout) ->
     % Send the request

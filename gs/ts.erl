@@ -1,7 +1,7 @@
-% Module definition
+% Tuple Space Module Definition
 -module(ts).
 
-% Export all invokable functions
+% Export all invocable functions
 -export([
     % Interfaces 1/3
     new/1,
@@ -26,20 +26,24 @@
 
 
 
-% Creates a new tuple space with Name
+% Creates a new tuple space TS with a specified Name
 new(Name) ->
+    % Launch the tss module with the init function and the Name of the TS 
     spawn(node(), tss, init, [Name]),
     ok
 .
 
 
 
-% Read Pattern from the tuple space TS (desctructive)
+% Read a matching Pattern from the tuple space TS (destructive)
+% A blocking read operation with no timeout specification,
+% which blocks until a match is found and returns the matching tuple
 in(TS, Pattern) -> % Use matching specification
     in(TS, Pattern, infinity)
 .
 
-% Read Pattern from the tuple space TS (desctructive)
+% Read a matching Pattern from the tuple space TS (desctructive) with timeout specification
+% if no match is found and the timeout expires, the function returns an error
 in(TS, Pattern, Timeout) ->
     try gen_server:call({global, TS}, {in, Pattern}, Timeout) of
         Response -> Response
@@ -68,12 +72,15 @@ in(TS, Pattern, Timeout) ->
 
 
 
-% Read Pattern from the tuple space TS (non-desctructive)
+% Read a matching Pattern from the tuple space TS (non-destructive)
+% A blocking read operation with no timeout specification,
+% which blocks until a match is found and returns the matching tuple 
 rd(TS, Pattern) -> % Use matching specification
     rd(TS, Pattern, infinity)
 .
 
-% Read Pattern from the tuple space TS (non-desctructive)
+% Read a matching Pattern from the tuple space TS (non-desctructive) with timeout specification
+% If no match is found and the timeout expires, the function returns an error 
 rd(TS, Pattern, Timeout) ->
     try gen_server:call({global, TS}, {rd, Pattern}, Timeout) of
         Response -> Response
@@ -106,24 +113,25 @@ rd(TS, Pattern, Timeout) ->
 
 
 
-% Write Tuple in the tuple space TS
+% Write the Tuple to the tuple space TS
 out(TS, Tuple) ->
     gen_server:cast({global, TS}, {out, self(), Tuple})
 .
 
 
 
-% Add Node to the TS, so Node can access to all tuples of TS
+% Add the Node to the TS, the Node has access to all tuples in the TS
 addNode(TS, Node) ->
+    % asynchronous 
     gen_server:cast({global, TS}, {add_node, Node})
 .
 
-% Remove Node from the TS
+% Remove the Node from the TS
 removeNode(TS, Node) ->
     gen_server:cast({global, TS}, {rm_node, Node})
 .
 
-% Get list of nodes who can access to the tuple space
+% Get list of all nodes that have access to the TS 
 nodes(TS) ->
     gen_server:call({global, TS}, {nodes})
 .
@@ -131,6 +139,7 @@ nodes(TS) ->
 %%%
 %%%
 %%%
+
 
 list(TS) -> gen_server:call({global, TS}, {list}).
 wq(TS) -> gen_server:call({global, TS}, {wq}).

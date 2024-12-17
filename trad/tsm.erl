@@ -105,13 +105,13 @@ server(Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, PendingRequestsQueu
             end,
             server(Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, NewPendingRequestsQueue);
 
-        % Handle the add node function to the TS (authorizing a new node)
+        % Handle the add node function to the whitelist (authorizing a new node)
         {add_node, Pid, Node} ->
             addNode(WhiteListRef, Node),
             Pid!{ok},
             server(Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, PendingRequestsQueue);
 
-        % Handle the remove node function from the TS (revoking access for a node)
+        % Handle the remove node function from the whitelist (revoking access for a node)
         {rm_node, Pid, Node} ->
             removeNode(WhiteListRef, Node),
             NewPendingRequestsQueue = removePendingRequests(PendingRequestsQueue, Node),
@@ -236,7 +236,7 @@ tryProcessRequest(TupleSpaceRef, {Type, Pid, Pattern}, PendingRequestsQueue) ->
     % Control  on Pattern Matching
     Res = ets:match_object(TupleSpaceRef, {Pattern}),
     case Res of
-        % If it does not match, add the request to the PendingRequestsQueue 
+        % If no match is found, add the request to the PendingRequestsQueue 
         [] ->
             NewPendingRequestsQueue = PendingRequestsQueue ++ [{Type, Pid, Pattern}];
         % otherwise process the request 
