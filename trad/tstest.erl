@@ -1,4 +1,7 @@
+% Test Set Module Definition 
 -module(tstest).
+
+% Export all invocable functions 
 -export([
     avgTimeIN/2,
     avgTimeRD/2,
@@ -9,10 +12,12 @@
 ]).
 
 
-
+% Measure the average time in ms for the read destructive (in) operation for N iterations
 avgTimeIN(TS, N) ->
+	% Adding the node to the tuple Space TS
     ts:addNode(TS, self()),
 
+	% The in operation is performed for each element in the sequence
 	Times = lists:map(
 		fun (E) ->
 			Tin = erlang:system_time(microsecond),
@@ -21,6 +26,7 @@ avgTimeIN(TS, N) ->
 			T = Tout - Tin,
 			T
 		end,
+		% Create a list of integers from 0 to N 
 		lists:seq(0, N)
 	),
 	
@@ -33,9 +39,12 @@ avgTimeIN(TS, N) ->
 	io:format("Avg time (IN): ~p us\n", [AvgTime])
 .
 
+% Measure the average time in ms for the read non-destructive (rd) operation for N iterations
 avgTimeRD(TS, N) ->
+	% Adding the node to the tuple space TS 
     ts:addNode(TS, self()),
 
+	% The rd operation is performed for each element in the sequence
 	Times = lists:map(
 		fun (E) ->
 			Tin = erlang:system_time(microsecond),
@@ -44,6 +53,7 @@ avgTimeRD(TS, N) ->
 			T = Tout - Tin,
 			T
 		end,
+		% Create a list of integers from 0 to N
 		lists:seq(0, N)
 	),
 	
@@ -56,9 +66,12 @@ avgTimeRD(TS, N) ->
 	io:format("Avg time (RD): ~p us\n", [AvgTime])
 .
 
+% Measure the average time in ms for the write (out) operation for N iterations
 avgTimeOUT(TS, N) ->
+	% Adding the node to the tuple space TS 
     ts:addNode(TS, self()),
 
+	% The out operation is performed for each element in the sequence
 	Times = lists:map(
 		fun (E) ->
 			Tin = erlang:system_time(microsecond),
@@ -67,6 +80,7 @@ avgTimeOUT(TS, N) ->
 			T = Tout - Tin,
 			T
 		end,
+		% Create a list of integers from 0 to N
 		lists:seq(0, N)
 	),
 	
@@ -80,15 +94,16 @@ avgTimeOUT(TS, N) ->
 .
 
 
-% Sequential average time
+% Run sequential average time tests for in, rd and out operations
 testBattery_IO_seq(TS, N) ->
 	avgTimeOUT(TS, N),
 	avgTimeRD(TS, N),
 	avgTimeIN(TS, N)
 .
 
-% Concurrent average time
+% Run concurrent average time tests 
 testBattery_IO_conc(TS, N) ->
+	% Initiate (spawn) the concurrent processes for working in parallel
 	spawn(tstest, avgTimeOUT, [TS, N]),
 	spawn(tstest, avgTimeIN, [TS, N])
 .

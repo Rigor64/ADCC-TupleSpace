@@ -21,59 +21,68 @@
 
 
 
-% Create a new tuple space with a specified Name
+% Create a new tuple space TS with a specified Name
 new(Name) ->
+    % Launch the tss module with the init function and the Name of the TS
     spawn(node(), tss, init, [Name]),
     ok
 .
 
 % Read a matching Pattern from the tuple space TS (destructive)
-% a blocking read operation with no timeout specification 
+% A blocking read operation with no timeout specification,
+% which blocks until a match is found and returns the matching tuple
 in(TS, Pattern) -> % Use matching specification
     Ret = in(TS, Pattern, infinity),
     Ret
 .
 
 % Read a matching Pattern from the tuple space TS (non-destructive)
-% a blocking read operation with no timeout specification 
+% A blocking read operation with no timeout specification,
+% which blocks until a match is found and returns the matching tuple 
 rd(TS, Pattern) -> % Use matching specification
     Ret = rd(TS, Pattern, infinity),
     Ret
 .
 
-% Write Tuple into the tuple space TS
-out(TS, Tuple) ->
+% Write the tuple to the tuple space TS
+out(TS, Tuple) -> 
     global:whereis_name(TS)!{out, self(), Tuple},
     ok
 .
 
 % Read a matching Pattern from the tuple space TS (destructive) with timeout specification
-% if there's no match and the timeout expires, the function will return an error
+% if no match is found and the timeout expires, the function returns an error
 in(TS, Pattern, Timeout) ->
-    % Send in request
+    % Send the request
     global:whereis_name(TS)!{in, self(), Pattern},
 
-    % Wait for message
+    % Wait for a message 
     receive
+        % A match was found 
         {ok, Tuple} -> {ok, Tuple}
     after
+        % The timeout has expired
         Timeout ->
+            % Send an abort signal to the TS 
             global:whereis_name(TS)!{abort, {in, self(), Pattern}},
             {err, timeout}
     end
 .
 
 % Read a matching Pattern from the tuple space TS (non-destructive)
-% if there's not a matching and the timeout runs out, then the function returns an error 
+% if no match is found and the timeout expires, the function returns an error 
 rd(TS, Pattern, Timeout) ->
-    % Send in request
+    % Send the request
     global:whereis_name(TS)!{rd, self(), Pattern},
 
-    % Wait for message
+    % Wait for a message
     receive
+        % A match was found 
         {ok, Tuple} -> {ok, Tuple}
     after
+        % The timeout has expired
         Timeout ->
+            % Send an abort signal to the TS
             global:whereis_name(TS)!{abort, {rd, self(), Pattern}},
             {err, timeout}
     end
@@ -84,18 +93,18 @@ rd(TS, Pattern, Timeout) ->
 
 % Add the Node to the TS, the node now has access to all tuples int the TS
 addNode(TS, Node) ->
-    % Send in request
+    % Send the request for the addition 
     global:whereis_name(TS)!{add_node, self(), Node}
 .
 
 % Remove the Node from the TS
 removeNode(TS, Node) ->
-    % Send in request
+    % Send the request for the removal
     global:whereis_name(TS)!{rm_node, self(), Node}
 .
 
-% Get a list of all nodes that have access to the tuple space
-% the function will return an error if the timeout is exceeded
+% Get a list of all nodes that have access to the TS
+% the function will return an error if the timeout has expired
 nodes(TS) ->
     % Send nodes request
     global:whereis_name(TS)!{nodes, self()},
