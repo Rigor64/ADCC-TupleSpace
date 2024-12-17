@@ -140,8 +140,9 @@ nodes(TS) ->
 %%%
 %%%
 
-
+% Return the list of tuples in the tuple space TS 
 list(TS) -> gen_server:call({global, TS}, {list}).
+% Return the wait queue list 
 wq(TS) -> gen_server:call({global, TS}, {wq}).
 
 crash(TS) -> gen_server:cast({global, TS}, {crash}).

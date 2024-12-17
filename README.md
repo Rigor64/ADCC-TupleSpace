@@ -45,7 +45,22 @@ Oltre alle prescritte funzioni, vi è anche la possibilità di procedere alla **
 
 <!-- SCELTE IMPLEMENTATIVE -->
 ## Scelte implementative
+___
+<!-- MODULI -->
+### MODULI
 
+* Modulo `tss`: Tuple-Space Supervisor.
+  Si occupa della supervisione del Tuple-Space Manager (`tsm`) e della sua inizializzazione. 
+  Nel caso in cui il TS Manager decade lo rispristina. 
+
+
+* Modulo `tsm`: Tuple-Space Manager. 
+  Si occupa della creazione e gestione delle tabelle ETS: Tuple Space (TS), delle tabelle ETS (whitelist e l'interfaccia del server.
+
+* Modulo `ts`: Tuple-Space Client.
+
+* Modulo `tstest`: batteria di Stress Test per qualificare le prestazioni e la resilienza del sistema.
+____
 * MATCH SPECIFICATIONS: Il Pattern da seguire per poter inserire un record nel Tuple Space è il seguente:
 
   ```erl
@@ -56,14 +71,7 @@ Oltre alle prescritte funzioni, vi è anche la possibilità di procedere alla **
 
 * TrapExit: è stato implemenatto per tutelare il Server Tuple Space dalla caduta di un eventuale link non autorizzato
 
-<!-- MODULI -->
-### MODULI
 
-* Modulo `tsm`: Tuple-Space Manager per gestire l'inizializzazione delle tabelle ETS e l'interfaccia del server.
-
-* Modulo `ts`: nodi figli che ereditano la funzione `init()` del padre.
-
-* Modulo `tstest`: batteria di Stress Test per qualificare le prestazioni e la resilienza del sistema.
 
 ### DATASET
 
