@@ -168,8 +168,18 @@ handle_cast({rm_node, Node}, {Supervisor, SyncFileRef, WhiteListRef, TupleSpaceR
 
 % Handle the abortion of a request from the WaitQueue 
 handle_cast({abort, {Type, Pid, Pattern}}, {Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}) ->
-    % Remove the request from the WaitQueue
-    NewWaitQueue = abortPendingRequest({Type, Pid, Pattern}, {SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}),
+    % Check if the PID is present in the whitelist (authorized node)
+    Present = inWhiteList(WhiteListRef, Pid),
+    case Present of 
+        % If it's authorized, insert the tuple in the TS  
+        % otherwise, wait and leave the WaitQueue unmodified 
+        true ->
+            % Remove the request from the WaitQueue
+            NewWaitQueue = abortPendingRequest({Type, Pid, Pattern}, {SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue});
+        false ->
+            NewWaitQueue = WaitQueue
+    end,
+    
     {noreply, {Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, NewWaitQueue}};
 
 % Handle the simulation of a crash to check the restore of the system  
@@ -178,10 +188,19 @@ handle_cast({crash}, State) ->
     {noreply, State};
 
 % Handle the stop of the server 
-handle_cast({stop}, {Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}) ->
-    % Notify the supervisor to delete the server 
-    Supervisor!{delete, self()},
-    {stop, "Stopped server", {Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}}
+handle_cast({stop, Pid}, {Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}) ->
+    % Check if the PID is present in the whitelist (authorized node)
+    Present = inWhiteList(WhiteListRef, Pid),
+    case Present of 
+        % If it's authorized, insert the tuple in the TS  
+        % otherwise, wait and leave the WaitQueue unmodified 
+        true ->
+            % Notify the supervisor to delete the server 
+            Supervisor!{delete, self()},
+            {stop, "Stopped server", {Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}};
+        false ->
+            {noreply, {Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}}
+    end
 .
 
 
@@ -201,7 +220,6 @@ inWhiteList(WhiteListRef, Node) ->
 
 % Remove the Node from the whitelist 
 removeFromWhiteList(WhiteListRef, Node) ->
-
     ets:delete_object(WhiteListRef, {Node})
 .
 
