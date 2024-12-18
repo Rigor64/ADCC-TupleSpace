@@ -197,6 +197,7 @@ handle_cast({stop, Pid}, {Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, 
         true ->
             % Notify the supervisor to delete the server 
             Supervisor!{delete, self()},
+            dets:close(SyncFileRef),
             {stop, "Stopped server", {Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}};
         false ->
             {noreply, {Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}}

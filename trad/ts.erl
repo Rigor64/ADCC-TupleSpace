@@ -13,6 +13,9 @@
     in/3,
     rd/3,
 
+    % Auxiliary Interface
+    close/1,
+
     % Interfaces 3/3
     addNode/2,
     removeNode/2,
@@ -113,4 +116,13 @@ nodes(TS) ->
     after
         5000 -> {err, timeout}
     end
+.
+
+
+% Get a list of all nodes that have access to the TS
+% the function will return an error if the timeout has expired
+close(TS) ->
+    % Send nodes request
+    global:whereis_name(TS)!{stop, self()},
+    ok
 .

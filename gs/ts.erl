@@ -18,6 +18,9 @@
     removeNode/2,
     nodes/1,
 
+    % Auxiliary Interface
+    close/1,
+
     % Testing
     list/1,
     wq/1,
@@ -134,6 +137,12 @@ removeNode(TS, Node) ->
 % Get list of all nodes that have access to the TS 
 nodes(TS) ->
     gen_server:call({global, TS}, {nodes})
+.
+
+% Stop and delete the tuple space
+close(TS) ->
+    gen_server:cast({global, TS}, {stop, self()}),
+    ok
 .
 
 %%%

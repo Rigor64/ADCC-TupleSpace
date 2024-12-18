@@ -123,12 +123,10 @@ server(Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, PendingRequestsQueu
             Pid!{ok, getNodes(WhiteListRef)},
             server(Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, PendingRequestsQueue);
 
-        % Handle the closing node function
-        {close, Pid} -> 
+        % Handle the closing of the tuple space
+        {stop, Pid} -> 
             % Check if the PID is present in the whitelist (authorized node)
             Present = inWhiteList(WhiteListRef, Pid),
-            %io:format("Debug print - OUT (~p)\n", [Tuple]),
-            %io:format("Debug print - OUT - inWhiteList (~p)\n", [Present]),
             case Present of 
                 % If it's authorized, delete the current process and 
                 % close the DETS 
