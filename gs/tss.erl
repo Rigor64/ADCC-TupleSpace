@@ -1,49 +1,45 @@
 % Tuple Space Supervisor Module Definition
 -module(tss).
 
-% Export all invocable functions 
+% Export all invocable functions
 -export([
-    init/1
+    init/2
 ]).
+
 
 
 % Intialization function 
 % Create a new tuple space manager with a specified Name 
 % Enter the server loop to monitor and handle incoming messages 
-init(Name) ->
-    % Build the manager (and monitor the process)
-	{ManagerPid, ManagerRef} = build_manager(Name),
+init(Name, Manager) ->
+    erlang:process_flag(trap_exit, true),
+    
     % Print the supervisor's PID 
-    io:format("Supervisor [~p] - Manager Built\n", [self()]),
+    io:format("Supervisor [~p] - Activated\n", [self()]),
     % Enter the supervisor's loop with manager's PID and reference
-	server(Name, ManagerPid, ManagerRef)
+	server(Name, Manager)
 .
 
 % Main loop of the supervisor for handling messages 
-server(Name, ManagerPid, ManagerRef) ->
-    io:format("Supervisor [~p] - ACTIVE\n", [self()]),
+server(Name, Manager) ->
+    io:format("Supervisor [~p] - Online\n", [self()]),
     % wait for a message
 	receive
         % If the tuple space manager process goes down, the supervisor restarts it 
-		{'DOWN', _MonitorRef, process, _Object, _Info} ->
-            % Rebuild the manager 
-            {NewManagerPid, NewManagerRef} = build_manager(Name),
-            % Restart the server loop 
-            server(Name, NewManagerPid, NewManagerRef);
-        
-        % If the supervisor receives a delete message, it stops monitoring 
-        {delete, ManagerPid} ->
-            demonitor(ManagerRef)
-	end
-.
+		{'EXIT', Manager, _Reason} ->
+            % Rebuild the manager
+            
+            {ok, NewManager} = gen_server:start_link({global, Name}, tsb, [Name, self()], []),
 
-% Spawn and monitor a new tuple space manager process 
-build_manager(Name) ->
-    % Start the tsb (gen_server) with the specified Name
-    {ok, Pid} = gen_server:start({global, Name}, tsb, [atom_to_list(Name), self()], [{hibernate_after, 10000}]),
-    % Monitor the process 
-    Ref = monitor(process, Pid),
-    io:format("New tuple space created: ~p\n", [Name]),
-    % Return the PID and reference of the spawned process
-    {Pid, Ref}
+            % Restart the server loop
+            server(Name, NewManager);
+        
+        % If the supervisor receives a stop message from the manager, it stops 
+        {stop, Manager} ->
+            unlink(Manager),
+            io:format("Supervisor [~p] - Deactivated\n", [self()]);
+
+        _ ->
+            server(Name, Manager)
+	end
 .
