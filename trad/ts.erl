@@ -27,8 +27,10 @@
 % Create a new tuple space TS with a specified Name
 new(Name) ->
     % Launch the tss module with the init function and the Name of the TS
-    spawn(node(), tsm, init, [Name, true]),
+    Pid = spawn(node(), tsm, init, [Name, true]),
+    global:register_name(Name, Pid),
     io:format("New tuple space created: ~p\n", [Name]),
+    ts:addNode(Name, self()),
     ok
 .
 
