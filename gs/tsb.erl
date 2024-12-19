@@ -15,71 +15,85 @@
 
 
 % Initialization function
+init([Name, true]) ->
+    % Enable trap_exit management to handle exit signals properly
+    erlang:process_flag(trap_exit, true),
+    
+    % Spawn supervisor process
+    Supervisor = spawn_link(node(), tss, init, [Name, self()]),
+
+    % Obtain reference for tables
+    % Create DETS for filesystem synchronization
+    DetsPath = atom_to_list(Name),
+    {ok, TupleSpaceRef} = dets:open_file(DetsPath, [{auto_save, 60000}, {ram_file, true}]),
+
+    % Create an ETS for authorized nodes: whitelist 
+    WhiteListRef = ets:new(whitelist, [set, private]),
+
+    % Create WaitQueue for blocking read operations
+    WaitQueue = [],
+
+    io:format("Gen Server [~p] - Start\n", [self()]),
+
+    % Return the initial state of the server with references and empty WaitQueue
+    {ok, {Name, Supervisor, WhiteListRef, TupleSpaceRef, WaitQueue}};
+
 init([Name, Supervisor]) ->
     % Enable trap_exit management to handle exit signals properly
     erlang:process_flag(trap_exit, true),
     
     % Obtain reference for tables
     % Create DETS for filesystem synchronization
-    {ok, SyncFileRef} = dets:open_file(Name, []),
+    DetsPath = atom_to_list(Name),
+    {ok, TupleSpaceRef} = dets:open_file(DetsPath, [{auto_save, 60000}, {ram_file, true}]),
 
     % Create an ETS for authorized nodes: whitelist 
     WhiteListRef = ets:new(whitelist, [set, private]),
-    % Create an ETS for storing tuples: space
-    TupleSpaceRef = ets:new(space, [set, private]),
-
-    % Retrieve data from the DETS table into the ETS tuple space
-    dets:to_ets(SyncFileRef, TupleSpaceRef),
 
     % Create WaitQueue for blocking read operations
     WaitQueue = [],
 
-    io:format("Gen Server - START\n", []),
+    io:format("Gen Server [~p] - Start\n", [self()]),
 
     % Return the initial state of the server with references and empty WaitQueue
-    {ok, {Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}}
+    {ok, {Name, Supervisor, WhiteListRef, TupleSpaceRef, WaitQueue}}
 .
 
 
 
 %% Handle info messages
-
-% Handle the hibernation of the gen server
-handle_info(timeout, {Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}) ->
-    io:format("Gen Server - HYBERNATE\n", []),
-
-    % Periodic saving and synchronization of the tuple space TS with the DETS file
-    ets:to_dets(TupleSpaceRef, SyncFileRef),
-    dets:sync(SyncFileRef),
-
-    % Hibernate the server 
-    {noreply, {Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}, hibernate};
-
 % Handle 'EXIT' signals 
-handle_info({'EXIT', Pid, _Reason}, {Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}) ->
+handle_info({'EXIT', Supervisor, _Reason}, {Name, Supervisor, WhiteListRef, TupleSpaceRef, WaitQueue}) ->
+    NewSupervisor = spawn_link(node(), tss, init, [Name]),
+
+    % Return the state 
+    {noreply, {Name, NewSupervisor, WhiteListRef, TupleSpaceRef, WaitQueue}};
+
+handle_info({'EXIT', Pid, _Reason}, {Name, Supervisor, WhiteListRef, TupleSpaceRef, WaitQueue}) ->
     % Remove the node from the whitelist 
     removeFromWhiteList(WhiteListRef, Pid),
+    
     % Remove the node's pending requests (read operations) from the WaitQueue
     ClearedQueue = removePendingRequests(WaitQueue, Pid),
 
     % Return the state 
-    {noreply, {Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, ClearedQueue}}
+    {noreply, {Name, Supervisor, WhiteListRef, TupleSpaceRef, ClearedQueue}}
 .
 
 %% Handle synchronous endpoints behaviors
 
 % List all tuples in the tuple space TS 
-handle_call({list}, _From, {Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}) ->
+handle_call({list}, _From, {Name, Supervisor, WhiteListRef, TupleSpaceRef, WaitQueue}) ->
     % Reply with the list 
-    {reply, {ets:tab2list(TupleSpaceRef)}, {Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}};
+    {reply, {ets:tab2list(TupleSpaceRef)}, {Name, Supervisor, WhiteListRef, TupleSpaceRef, WaitQueue}};
 
 % Check the current WaitQueue  
-handle_call({wq}, _From, {Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}) ->
+handle_call({wq}, _From, {Name, Supervisor, WhiteListRef, TupleSpaceRef, WaitQueue}) ->
     % Reply with the current state of the WaitQueue
-    {reply, {WaitQueue}, {Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}};
+    {reply, {WaitQueue}, {Name, Supervisor, WhiteListRef, TupleSpaceRef, WaitQueue}};
 
 % Handle the read 'in' operation (destructive) 
-handle_call({in, Pattern}, From, {Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}) ->
+handle_call({in, Pattern}, From, {Name, Supervisor, WhiteListRef, TupleSpaceRef, WaitQueue}) ->
     {Pid, _} = From,
     % Check if the PID is present in the whitelist (authorized node)
     Present = inWhiteList(WhiteListRef, Pid),
@@ -88,14 +102,14 @@ handle_call({in, Pattern}, From, {Supervisor, SyncFileRef, WhiteListRef, TupleSp
         % If it's authorized, try the read operation (if there's a match); 
         % otherwise, wait and leave the WaitQueue unmodified 
         true ->
-            NewWaitQueue = tryProcessRequest({in, From, Pattern}, {SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue});
+            NewWaitQueue = tryProcessRequest({in, From, Pattern}, {Name, Supervisor, WhiteListRef, TupleSpaceRef, WaitQueue});
         false ->
             NewWaitQueue = WaitQueue
     end,
-    {noreply, {Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, NewWaitQueue}};
+    {noreply, {Name, Supervisor, WhiteListRef, TupleSpaceRef, NewWaitQueue}};
 
 % Handle the read 'rd' operation (non-destructive) 
-handle_call({rd, Pattern}, From, {Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}) ->
+handle_call({rd, Pattern}, From, {Name, Supervisor, WhiteListRef, TupleSpaceRef, WaitQueue}) ->
     {Pid, _} = From,
     % Check if the PID is present in the whitelist (authorized node)
     Present = inWhiteList(WhiteListRef, Pid),
@@ -104,14 +118,14 @@ handle_call({rd, Pattern}, From, {Supervisor, SyncFileRef, WhiteListRef, TupleSp
         % If it's authorized, try the read operation (if there's a match); 
         % otherwise, wait and leave the WaitQueue unmodified 
         true ->
-            NewWaitQueue = tryProcessRequest({rd, From, Pattern}, {SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue});
+            NewWaitQueue = tryProcessRequest({rd, From, Pattern}, {Name, Supervisor, WhiteListRef, TupleSpaceRef, WaitQueue});
         false ->
             NewWaitQueue = WaitQueue
     end,
-    {noreply, {Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, NewWaitQueue}};
+    {noreply, {Name, Supervisor, WhiteListRef, TupleSpaceRef, NewWaitQueue}};
 
 % List of all the authorized nodes (in the whitelist)
-handle_call({nodes}, _From, {Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}) ->
+handle_call({nodes}, _From, {Name, Supervisor, WhiteListRef, TupleSpaceRef, WaitQueue}) ->
     % Accumulate the nodes in the whitelist by folding over the table
     Acc = ets:foldr(
         fun({Elem}, Acc) ->
@@ -123,13 +137,13 @@ handle_call({nodes}, _From, {Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRe
     ),
     
     % Reply with the list 
-    {reply, {ok, Acc}, {Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}}
+    {reply, {ok, Acc}, {Name, Supervisor, WhiteListRef, TupleSpaceRef, WaitQueue}}
 .
 
 %% Handle asynchronous endpoints behaviors 
 
 % Handle the write 'out' operation in the tuple space TS 
-handle_cast({out, Pid, Tuple}, {Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}) ->
+handle_cast({out, Pid, Tuple}, {Name, Supervisor, WhiteListRef, TupleSpaceRef, WaitQueue}) ->
     % Check if the PID is present in the whitelist (authorized node)
     Present = inWhiteList(WhiteListRef, Pid),
     case Present of 
@@ -137,26 +151,26 @@ handle_cast({out, Pid, Tuple}, {Supervisor, SyncFileRef, WhiteListRef, TupleSpac
         % otherwise, wait and leave the WaitQueue unmodified 
         true ->
             % Insert the tuple 
-            ets:insert(TupleSpaceRef, {Tuple}),
+            dets:insert(TupleSpaceRef, {Tuple}),
             % Process pending requests in the WaitQueue (read operations waiting for a pattern-match)
-            NewWaitQueue = processPendingRequests({SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue});
+            NewWaitQueue = processPendingRequests({Name, Supervisor, WhiteListRef, TupleSpaceRef, WaitQueue});
         false ->
             NewWaitQueue = WaitQueue
     end,
     
-    {noreply, {Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, NewWaitQueue}};
+    {noreply, {Name, Supervisor, WhiteListRef, TupleSpaceRef, NewWaitQueue}};
 
 % Handle the addition of the Node to the whitelist
-handle_cast({add_node, Node}, {Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}) ->
+handle_cast({add_node, Node}, {Name, Supervisor, WhiteListRef, TupleSpaceRef, WaitQueue}) ->
     % Link to the Node 
     link(Node),
     % Insert the Node to the whitelist 
     ets:insert(WhiteListRef, {Node}),
 
-    {noreply, {Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}};
+    {noreply, {Name, Supervisor, WhiteListRef, TupleSpaceRef, WaitQueue}};
 
 % Handle the removal of the Node from the Whitelist 
-handle_cast({rm_node, Node}, {Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}) ->
+handle_cast({rm_node, Node}, {Name, Supervisor, WhiteListRef, TupleSpaceRef, WaitQueue}) ->
     % Unlink from the Node 
     unlink(Node),
     % Remove the Node from the whitelist
@@ -164,10 +178,10 @@ handle_cast({rm_node, Node}, {Supervisor, SyncFileRef, WhiteListRef, TupleSpaceR
     % Remove the Node's read requests from the WaitQueue
     ClearedQueue = removePendingRequests(WaitQueue, Node),
 
-    {noreply, {Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, ClearedQueue}};
+    {noreply, {Name, Supervisor, WhiteListRef, TupleSpaceRef, ClearedQueue}};
 
 % Handle the abortion of a request from the WaitQueue 
-handle_cast({abort, {Type, Pid, Pattern}}, {Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}) ->
+handle_cast({abort, {Type, Pid, Pattern}}, {Name, Supervisor, WhiteListRef, TupleSpaceRef, WaitQueue}) ->
     % Check if the PID is present in the whitelist (authorized node)
     Present = inWhiteList(WhiteListRef, Pid),
     case Present of 
@@ -175,12 +189,12 @@ handle_cast({abort, {Type, Pid, Pattern}}, {Supervisor, SyncFileRef, WhiteListRe
         % otherwise, wait and leave the WaitQueue unmodified 
         true ->
             % Remove the request from the WaitQueue
-            NewWaitQueue = abortPendingRequest({Type, Pid, Pattern}, {SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue});
+            NewWaitQueue = abortPendingRequest({Type, Pid, Pattern}, {Name, Supervisor, WhiteListRef, TupleSpaceRef, WaitQueue});
         false ->
             NewWaitQueue = WaitQueue
     end,
     
-    {noreply, {Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, NewWaitQueue}};
+    {noreply, {Name, Supervisor, WhiteListRef, TupleSpaceRef, NewWaitQueue}};
 
 % Handle the simulation of a crash to check the restore of the system  
 handle_cast({crash}, State) ->
@@ -188,7 +202,7 @@ handle_cast({crash}, State) ->
     {noreply, State};
 
 % Handle the stop of the server 
-handle_cast({stop, Pid}, {Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}) ->
+handle_cast({stop, Pid}, {Name, Supervisor, WhiteListRef, TupleSpaceRef, WaitQueue}) ->
     % Check if the PID is present in the whitelist (authorized node)
     Present = inWhiteList(WhiteListRef, Pid),
     case Present of 
@@ -196,11 +210,11 @@ handle_cast({stop, Pid}, {Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, 
         % otherwise, wait and leave the WaitQueue unmodified 
         true ->
             % Notify the supervisor to delete the server 
-            Supervisor!{delete, self()},
-            dets:close(SyncFileRef),
-            {stop, "Stopped server", {Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}};
+            Supervisor!{stop, self()},
+            dets:close(TupleSpaceRef),
+            {stop, "Stopped server", {Name, Supervisor, WhiteListRef, TupleSpaceRef, WaitQueue}};
         false ->
-            {noreply, {Supervisor, SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}}
+            {noreply, {Name, Supervisor, WhiteListRef, TupleSpaceRef, WaitQueue}}
     end
 .
 
@@ -240,12 +254,12 @@ removePendingRequests(WaitQueue, Node) ->
 .
 
 % Process pending requests in the waitqueue 
-processPendingRequests({SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}) ->
+processPendingRequests({Name, Supervisor, WhiteListRef, TupleSpaceRef, WaitQueue}) ->
     %io:format("DEBUG PRINT - processPendingRequests (start)\n", []),
     NewWaitQueue = lists:foldr(
 		fun({Type, {Pid, Tag}, Pattern}, Acc) -> 
             % Attempt to process a request
-			NewAcc = tryProcessRequest({Type, {Pid, Tag}, Pattern}, {SyncFileRef, WhiteListRef, TupleSpaceRef, Acc}),
+			NewAcc = tryProcessRequest({Type, {Pid, Tag}, Pattern}, {Name, Supervisor, WhiteListRef, TupleSpaceRef, Acc}),
 			NewAcc
 		end,
 		[],
@@ -256,9 +270,9 @@ processPendingRequests({SyncFileRef, WhiteListRef, TupleSpaceRef, WaitQueue}) ->
 .
 
 % Attempt to process a request based on the type (in/rd) and pattern 
-tryProcessRequest({Type, {Pid, Tag}, Pattern}, {_SyncFileRef, _WhiteListRef, TupleSpaceRef, WaitQueue}) ->
+tryProcessRequest({Type, {Pid, Tag}, Pattern}, {_Name, _Supervisor, _WhiteListRef, TupleSpaceRef, WaitQueue}) ->
     % Control on Pattern Matching
-    Res = ets:match_object(TupleSpaceRef, {Pattern}), % MS
+    Res = dets:match_object(TupleSpaceRef, {Pattern}), % MS
     case Res of
         % If no match is found, add the request to the WaitQueue  
         [] ->
@@ -271,7 +285,7 @@ tryProcessRequest({Type, {Pid, Tag}, Pattern}, {_SyncFileRef, _WhiteListRef, Tup
             gen_server:reply({Pid, Tag}, {ok, H}),
             case Type of
                 % Remove the tuple in the 'in' operation (destructive)
-                in -> ets:delete_object(TupleSpaceRef, {H});
+                in -> dets:delete_object(TupleSpaceRef, {H});
                 rd -> ok
             end,
             NewWaitQueue = WaitQueue
@@ -282,7 +296,7 @@ tryProcessRequest({Type, {Pid, Tag}, Pattern}, {_SyncFileRef, _WhiteListRef, Tup
 .
 
 % Remove a request from the WaitQueue
-abortPendingRequest({Type, Pid, Pattern}, {_SyncFileRef, _WhiteListRef, _TupleSpaceRef, WaitQueue}) ->
+abortPendingRequest({Type, Pid, Pattern}, {_Name, _Supervisor, _WhiteListRef, _TupleSpaceRef, WaitQueue}) ->
     NewWaitQueue = lists:foldr(
 		fun(Elem, Acc) ->
             %io:format("DEBUG PRINT - abort (~p)\n", [Elem]), 

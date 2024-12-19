@@ -32,7 +32,8 @@
 % Creates a new tuple space TS with a specified Name
 new(Name) ->
     % Launch the tss module with the init function and the Name of the TS 
-    spawn(node(), tss, init, [Name]),
+    gen_server:start({global, Name}, tsb, [Name, true], []),
+    addNode(Name, self()),
     ok
 .
 
