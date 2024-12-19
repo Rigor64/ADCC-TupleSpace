@@ -3,7 +3,7 @@
 
 % Export all invocable functions
 -export([
-    init/1
+    init/2
 ]).
 
 
@@ -16,7 +16,6 @@ init(Name, Manager) ->
     
     % Print the supervisor's PID 
     io:format("Supervisor [~p] - Activated\n", [self()]),
-
     % Enter the supervisor's loop with manager's PID and reference
 	server(Name, Manager)
 .
@@ -40,9 +39,9 @@ server(Name, Manager) ->
         % If the supervisor receives a stop message from the manager, it stops 
         {stop, Manager} ->
             unlink(Manager),
-            io:format("Supervisor [~p] - Deactivated\n", [self()]),
+            io:format("Supervisor [~p] - Deactivated\n", [self()]);
 
         _ ->
-            server(Name, Manager);
+            server(Name, Manager)
 	end
 .

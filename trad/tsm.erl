@@ -15,7 +15,7 @@ init(Name, true) ->
     erlang:process_flag(trap_exit, true),
 
     % Spawn supervisor process
-    Supervisor = spawn_link(node(), tss, init, [Name, self()])
+    Supervisor = spawn_link(node(), tss, init, [Name, self()]),
     
     % Obtain a reference for tables
     % Create DETS (disk-based table) for filesystem synchronization
@@ -27,7 +27,7 @@ init(Name, true) ->
 
     % Start the server 
     % (for handling incoming messages for tuple space read/write operations)
-    server(Supervisor, WhiteListRef, TupleSpaceRef, []);
+    server(Name, Supervisor, WhiteListRef, TupleSpaceRef, []);
 
 % Same as the previous definition, but without spawining the supervisor
 init(Name, Supervisor) ->
@@ -38,26 +38,26 @@ init(Name, Supervisor) ->
 
     WhiteListRef = ets:new(whitelist, [set, private]),
 
-    server(Supervisor, WhiteListRef, TupleSpaceRef, [])
+    server(Name,Supervisor, WhiteListRef, TupleSpaceRef, [])
 .
 
 
 
 % Real TS Server
-server(Supervisor, WhiteListRef, TupleSpaceRef, PendingRequestsQueue) ->
+server(Name, Supervisor, WhiteListRef, TupleSpaceRef, PendingRequestsQueue) ->
     %io:format("Debug print - SERVER PID (~p)\n", [self()]),
     
     receive
         % Handle supervisor crash
         {'EXIT', Supervisor, _Reason} ->
             NewSupervisor = spawn_link(node(), tss, init, [Name, self()]),
-            server(NewSupervisor, WhiteListRef, TupleSpaceRef, PendingRequestsQueue);
+            server(Name, NewSupervisor, WhiteListRef, TupleSpaceRef, PendingRequestsQueue);
 
         % Handle client crash
         {'EXIT', Pid, _Reason} ->
             removeFromWhiteList(WhiteListRef, Pid),
             NewPendingRequestsQueue = removePendingRequests(PendingRequestsQueue, Pid),
-            server(Supervisor, WhiteListRef, TupleSpaceRef, NewPendingRequestsQueue);
+            server(Name,Supervisor, WhiteListRef, TupleSpaceRef, NewPendingRequestsQueue);
 
         % Handle ETS destructive read (removes the matching tuple)
         {in, Pid, Pattern} -> 
@@ -71,7 +71,7 @@ server(Supervisor, WhiteListRef, TupleSpaceRef, PendingRequestsQueue) ->
                 _ -> 
                     NewPendingRequestsQueue = PendingRequestsQueue
             end,	
-            server(Supervisor, WhiteListRef, TupleSpaceRef, NewPendingRequestsQueue);
+            server(Name,Supervisor, WhiteListRef, TupleSpaceRef, NewPendingRequestsQueue);
         
         % Handle ETS non-destructive read (does not remove the matching tuple)
         {rd, Pid, Pattern} -> 
@@ -85,7 +85,7 @@ server(Supervisor, WhiteListRef, TupleSpaceRef, PendingRequestsQueue) ->
                 _ -> 
                     NewPendingRequestsQueue = PendingRequestsQueue
             end, 
-            server(Supervisor, WhiteListRef, TupleSpaceRef, NewPendingRequestsQueue);
+            server(Name, Supervisor, WhiteListRef, TupleSpaceRef, NewPendingRequestsQueue);
         
         % Abort a specific in/rd request (the client will call this upon timeout)
         {abort, {Type, Pid, Pattern}} ->  
@@ -99,7 +99,7 @@ server(Supervisor, WhiteListRef, TupleSpaceRef, PendingRequestsQueue) ->
                 _ -> 
                     NewPendingRequestsQueue = PendingRequestsQueue
             end, 
-            server(Supervisor, WhiteListRef, TupleSpaceRef, NewPendingRequestsQueue);
+            server(Name, Supervisor, WhiteListRef, TupleSpaceRef, NewPendingRequestsQueue);
 
         % Handle ETS write operation for adding the tuple to the TS,
         % PendingRequestsQueue removal
@@ -110,30 +110,30 @@ server(Supervisor, WhiteListRef, TupleSpaceRef, PendingRequestsQueue) ->
                 % If it's authorized, write the tuple to the TS;
                 % otherwise, return the same PendingRequestsQueue
                 true ->
-                    _InsertRes = ets:insert(TupleSpaceRef, {Tuple}),
+                    _InsertRes = dets:insert(TupleSpaceRef, {Tuple}),   % ets:insert(TupleSpaceRef, {Tuple})
                     NewPendingRequestsQueue = processPendingRequests(TupleSpaceRef, PendingRequestsQueue);
                 _ ->
                     NewPendingRequestsQueue = PendingRequestsQueue
             end,
-            server(Supervisor, WhiteListRef, TupleSpaceRef, NewPendingRequestsQueue);
+            server(Name, Supervisor, WhiteListRef, TupleSpaceRef, NewPendingRequestsQueue);
 
         % Handle the add node function to the whitelist (authorizing a new node)
         {add_node, Pid, Node} ->
             addNode(WhiteListRef, Node),
             Pid!{ok},
-            server(Supervisor, WhiteListRef, TupleSpaceRef, PendingRequestsQueue);
+            server(Name, Supervisor, WhiteListRef, TupleSpaceRef, PendingRequestsQueue);
 
         % Handle the remove node function from the whitelist (revoking access for a node)
         {rm_node, Pid, Node} ->
             removeNode(WhiteListRef, Node),
             NewPendingRequestsQueue = removePendingRequests(PendingRequestsQueue, Node),
             Pid!{ok},
-            server(Supervisor, WhiteListRef, TupleSpaceRef, NewPendingRequestsQueue);
+            server(Name, Supervisor, WhiteListRef, TupleSpaceRef, NewPendingRequestsQueue);
 
         % Handle the nodes list (retrieve the list of authorized nodes)
         {nodes, Pid} ->
             Pid!{ok, getNodes(WhiteListRef)},
-            server(Supervisor, WhiteListRef, TupleSpaceRef, PendingRequestsQueue);
+            server(Name, Supervisor, WhiteListRef, TupleSpaceRef, PendingRequestsQueue);
 
         % Handle the closing of the tuple space
         {stop, Pid} -> 
@@ -144,9 +144,9 @@ server(Supervisor, WhiteListRef, TupleSpaceRef, PendingRequestsQueue) ->
                 % close the DETS 
                 true ->
                     Supervisor!{stop, self()},
-                    dets:close(SyncFileRef);
+                    dets:close(TupleSpaceRef);  % PRIMA ERA SyncFileRef
                 false ->
-                    server(Supervisor, WhiteListRef, TupleSpaceRef, PendingRequestsQueue)
+                    server(Name, Supervisor, WhiteListRef, TupleSpaceRef, PendingRequestsQueue)
             end;
 
         %%%%%%%%
@@ -161,20 +161,20 @@ server(Supervisor, WhiteListRef, TupleSpaceRef, PendingRequestsQueue) ->
         % Get a list of the current tuples in the TS 
         {list, Pid} ->
             Pid!{okpatato, ets:tab2list(TupleSpaceRef)},
-            server(Supervisor, WhiteListRef, TupleSpaceRef, PendingRequestsQueue);
+            server(Name, Supervisor, WhiteListRef, TupleSpaceRef, PendingRequestsQueue);
         
         % Get a list of the pending requests in the waitqueue
         {wq, Pid} ->
             Pid!{waitqueue, PendingRequestsQueue},
-            server(Supervisor, WhiteListRef, TupleSpaceRef, PendingRequestsQueue);
+            server(Name, Supervisor, WhiteListRef, TupleSpaceRef, PendingRequestsQueue);
         
         % Check if the PID is in the whitelist (authorized node)
         {wl, Pid} ->
             Pid!{inWhiteList(WhiteListRef, Pid)},
-            server(Supervisor, WhiteListRef, TupleSpaceRef, PendingRequestsQueue);
+            server(Name, Supervisor, WhiteListRef, TupleSpaceRef, PendingRequestsQueue);
 
         % Catch and remove all the unhandled messages (wildcard)
-        _ -> server(Supervisor, WhiteListRef, TupleSpaceRef, PendingRequestsQueue)
+        _ -> server(Name, Supervisor, WhiteListRef, TupleSpaceRef, PendingRequestsQueue)
 
     end
 .
@@ -238,7 +238,7 @@ removePendingRequests(PendingRequestsQueue, Node) ->
 % Attempt to process a request based on the type (in/rd) and pattern 
 tryProcessRequest(TupleSpaceRef, {Type, Pid, Pattern}, PendingRequestsQueue) -> 
     % Control  on Pattern Matching
-    Res = ets:match_object(TupleSpaceRef, {Pattern}),
+    Res = dets:match_object(TupleSpaceRef, {Pattern}),
     case Res of
         % If no match is found, add the request to the PendingRequestsQueue 
         [] ->
@@ -247,7 +247,7 @@ tryProcessRequest(TupleSpaceRef, {Type, Pid, Pattern}, PendingRequestsQueue) ->
         [{H} | _T] ->
             Pid!{ok, H},
             case Type of
-                in -> ets:delete_object(TupleSpaceRef, {H});
+                in -> dets:delete_object(TupleSpaceRef, {H});
                 rd -> ok
             end,
             NewPendingRequestsQueue = PendingRequestsQueue
