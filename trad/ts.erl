@@ -28,8 +28,11 @@
 new(Name) ->
     % Launch the tss module with the init function and the Name of the TS
     Pid = spawn(node(), tsm, init, [Name, true]),
+    % Register the PID (process) globally with the given Name, 
+    % allowing other nodes to reference the TS by its Name
     global:register_name(Name, Pid),
     io:format("New tuple space created: ~p\n", [Name]),
+    % Add the current node (self()) to the tuple space TS 
     ts:addNode(Name, self()),
     ok
 .
@@ -59,10 +62,10 @@ out(TS, Tuple) ->
 % Read a matching Pattern from the tuple space TS (destructive) with timeout specification
 % if no match is found and the timeout expires, the function returns an error
 in(TS, Pattern, Timeout) ->
-    % Send the request
+    % Send the request to the process managing the TS 
     global:whereis_name(TS)!{in, self(), Pattern},
 
-    % Wait for a message 
+    % Wait for a message (response from the TS)
     receive
         % A match was found 
         {ok, Tuple} -> {ok, Tuple}
@@ -71,6 +74,7 @@ in(TS, Pattern, Timeout) ->
         Timeout ->
             % Send an abort signal to the TS 
             global:whereis_name(TS)!{abort, {in, self(), Pattern}},
+            % Return an error indicating that the timeout occured 
             {err, timeout}
     end
 .
@@ -78,10 +82,10 @@ in(TS, Pattern, Timeout) ->
 % Read a matching Pattern from the tuple space TS (non-destructive) with timeout specification
 % if no match is found and the timeout expires, the function returns an error 
 rd(TS, Pattern, Timeout) ->
-    % Send the request
+    % Send the request to the process managing the TS 
     global:whereis_name(TS)!{rd, self(), Pattern},
 
-    % Wait for a message
+    % Wait for a message (response from the TS)
     receive
         % A match was found 
         {ok, Tuple} -> {ok, Tuple}
@@ -90,6 +94,7 @@ rd(TS, Pattern, Timeout) ->
         Timeout ->
             % Send an abort signal to the TS
             global:whereis_name(TS)!{abort, {rd, self(), Pattern}},
+            % Return an error indicating that the timeout occured 
             {err, timeout}
     end
 .
@@ -99,33 +104,36 @@ rd(TS, Pattern, Timeout) ->
 
 % Add the Node to the TS, the node now has access to all tuples int the TS
 addNode(TS, Node) ->
-    % Send the request for the addition 
+    % Send the request for adding the Node
     global:whereis_name(TS)!{add_node, self(), Node}
 .
 
 % Remove the Node from the TS
 removeNode(TS, Node) ->
-    % Send the request for the removal
+    % Send the request for the removal of the Node
     global:whereis_name(TS)!{rm_node, self(), Node}
 .
 
 % Get a list of all nodes that have access to the TS
 % the function will return an error if the timeout has expired
 nodes(TS) ->
-    % Send nodes request
+    % Send the request for the list of nodes 
     global:whereis_name(TS)!{nodes, self()},
+    % Wait for a message (response from the TS)
     receive
+        % Return the list of all nodes authorized 
         {ok, List} -> List
     after
+        % If no response is received
+        % Return an error indicating that the timeout has expired
         5000 -> {err, timeout}
     end
 .
 
 
-% Get a list of all nodes that have access to the TS
-% the function will return an error if the timeout has expired
+% Close the tuple space TS 
 close(TS) ->
-    % Send nodes request
+    % Send the request to stop the TS 
     global:whereis_name(TS)!{stop, self()},
     ok
 .
