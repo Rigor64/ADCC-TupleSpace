@@ -9,38 +9,43 @@
 
 
 % Intialization function 
-% Create a new tuple space manager with a specified Name 
-% Enter the server loop to monitor and handle incoming messages 
 init(Name, Manager) ->
+    % Enable trap_exit management 
+    % Setting the flag to trap 'EXIT' signals for handling process crashes or exits
     erlang:process_flag(trap_exit, true),
     
     % Print the supervisor's PID 
     io:format("Supervisor [~p] - Activated\n", [self()]),
-    % Enter the supervisor's loop with manager's PID and reference
+    % Start the server for handling incoming messages  
 	server(Name, Manager)
 .
 
-% Main loop of the supervisor for handling messages 
+% Supervisor's server  
 server(Name, Manager) ->
+
     io:format("Supervisor [~p] - Online\n", [self()]),
+
     % wait for a message
 	receive
-        % If the tuple space manager process goes down, the supervisor restarts it 
+        % If the tuple space manager process goes down, the supervisor restores it 
 		{'EXIT', Manager, _Reason} ->
-            % Rebuild the manager
-            % Spawn and monitor a new process for the tsm which initializes the TS with the specified Name
+            
+            % Spawn a new process for the 'tsm:init' function and link it to the current process.
             NewManager = spawn_link(node(), tsm, init, [Name, self()]),
             % Register the new manager process (it can be accessed globally)
             global:register_name(Name, NewManager),
 
-            % Restart the server loop
+            % Call the server to continue the loop 
             server(Name, NewManager);
         
         % If the supervisor receives a stop message from the manager, it stops 
         {stop, Manager} ->
+            
+            % unlink from the manager process 
             unlink(Manager),
             io:format("Supervisor [~p] - Deactivated\n", [self()]);
 
+        % Handle any other messages  
         _ ->
             server(Name, Manager)
 	end
