@@ -12,17 +12,24 @@
 ]).
 
 
-% Measure the average time in ms for the read destructive (in) operation for N iterations
+% Measure the average time in ms for the read destructive ('in') operation for N iterations
 avgTimeIN(TS, N) ->
 	% Adding the node to the tuple Space TS
     ts:addNode(TS, self()),
 
-	% The in operation is performed for each element in the sequence
+	% The 'in' operation is performed for each element in the sequence
 	Times = lists:map(
 		fun (E) ->
+			% Start time 
 			Tin = erlang:system_time(microsecond),
+
+			% Perform the 'in' operation 
 			ts:in(TS, {pattern, E}),
+
+			% End time 
 			Tout = erlang:system_time(microsecond),
+
+			% Calculate the elapsed time 
 			T = Tout - Tin,
 			T
 		end,
@@ -30,26 +37,36 @@ avgTimeIN(TS, N) ->
 		lists:seq(0, N)
 	),
 	
+	% Total number of iterations 
 	Total = length(Times),
 	
+	% Sum each invidual time calculated 
 	Sum = lists:sum(Times),
 
+	% Calculate the average time 
 	AvgTime = Sum / Total,
 
 	io:format("Avg time (IN): ~p us\n", [AvgTime])
 .
 
-% Measure the average time in ms for the read non-destructive (rd) operation for N iterations
+% Measure the average time in ms for the read non-destructive ('rd') operation for N iterations
 avgTimeRD(TS, N) ->
 	% Adding the node to the tuple space TS 
     ts:addNode(TS, self()),
 
-	% The rd operation is performed for each element in the sequence
+	% The 'rd' operation is performed for each element in the sequence
 	Times = lists:map(
 		fun (E) ->
+			% Start time 
 			Tin = erlang:system_time(microsecond),
+
+			% Perform the 'rd' operation 
 			ts:rd(TS, {pattern, E}),
+
+			% End time 
 			Tout = erlang:system_time(microsecond),
+			
+			% Calculate the elapsed time 
 			T = Tout - Tin,
 			T
 		end,
@@ -57,26 +74,36 @@ avgTimeRD(TS, N) ->
 		lists:seq(0, N)
 	),
 	
+	% Total number of iterations 
 	Total = length(Times),
 	
+	% Sum each individual time 
 	Sum = lists:sum(Times),
 
+	% Calculate the average time 
 	AvgTime = Sum / Total,
 
 	io:format("Avg time (RD): ~p us\n", [AvgTime])
 .
 
-% Measure the average time in ms for the write (out) operation for N iterations
+% Measure the average time in ms for the write ('out') operation for N iterations
 avgTimeOUT(TS, N) ->
 	% Adding the node to the tuple space TS 
     ts:addNode(TS, self()),
 
-	% The out operation is performed for each element in the sequence
+	% The 'out' operation is performed for each element in the sequence
 	Times = lists:map(
 		fun (E) ->
+			% Start time 
 			Tin = erlang:system_time(microsecond),
+
+			% Perform the 'out' operation 
 			ts:out(TS, {pattern, E}),
+
+			% End time 
 			Tout = erlang:system_time(microsecond),
+
+			% Calculate the elapsed time 
 			T = Tout - Tin,
 			T
 		end,
@@ -84,10 +111,13 @@ avgTimeOUT(TS, N) ->
 		lists:seq(0, N)
 	),
 	
+	% Total number of iterations 
 	Total = length(Times),
 	
+	% Sum each invidual time 
 	Sum = lists:sum(Times),
 
+	% Calculate the average time 
 	AvgTime = Sum / Total,
 
 	io:format("Avg time (OUT): ~p us\n", [AvgTime])
@@ -96,14 +126,19 @@ avgTimeOUT(TS, N) ->
 
 % Run sequential average time tests for in, rd and out operations
 testBattery_IO_seq(TS, N) ->
+
+	% Measure and print the average time for the 'out' operation
 	avgTimeOUT(TS, N),
+	% Measure and print the average time for the 'rd' operation
 	avgTimeRD(TS, N),
+	% Measure and print the average time for the 'in' operation
 	avgTimeIN(TS, N)
 .
 
 % Run concurrent average time tests 
 testBattery_IO_conc(TS, N) ->
-	% Initiate (spawn) the concurrent processes for working in parallel
+	% Initiate (spawn) a concurrent process for measuring the average time for the 'out' operation
 	spawn(tstest, avgTimeOUT, [TS, N]),
+	% Initiate (spawn) a concurrent process for measuring the average time for the 'in' operation
 	spawn(tstest, avgTimeIN, [TS, N])
 .

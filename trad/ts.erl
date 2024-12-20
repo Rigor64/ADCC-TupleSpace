@@ -33,7 +33,7 @@ new(Name) ->
     global:register_name(Name, Pid),
     io:format("New tuple space created: ~p\n", [Name]),
     % Add the current node (self()) to the tuple space TS 
-    ts:addNode(Name, self()),
+    addNode(Name, self()),
     ok
 .
 

@@ -9,9 +9,10 @@
 
 
 % Intialization function 
-% Create a new tuple space manager with a specified Name 
-% Enter the server loop to monitor and handle incoming messages 
 init(Name, Manager) ->
+
+    % Enable trap_exit management 
+    % Setting the flag to trap 'EXIT' signals for handling process crashes or exits
     erlang:process_flag(trap_exit, true),
     
     % Print the supervisor's PID 
