@@ -84,8 +84,10 @@ handle_info({'EXIT', Pid, _Reason}, {Name, Supervisor, WhiteListRef, TupleSpaceR
 
 % List all tuples in the tuple space TS 
 handle_call({list}, _From, {Name, Supervisor, WhiteListRef, TupleSpaceRef, WaitQueue}) ->
+    Cont = dets:foldr(fun(E, A) -> A ++ [E] end, [], TupleSpaceRef),
+    
     % Reply with the list 
-    {reply, {ets:tab2list(TupleSpaceRef)}, {Name, Supervisor, WhiteListRef, TupleSpaceRef, WaitQueue}};
+    {reply, {Cont}, {Name, Supervisor, WhiteListRef, TupleSpaceRef, WaitQueue}};
 
 % Check the current WaitQueue  
 handle_call({wq}, _From, {Name, Supervisor, WhiteListRef, TupleSpaceRef, WaitQueue}) ->
