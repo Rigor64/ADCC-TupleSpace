@@ -137,3 +137,4 @@ close(TS) ->
     global:whereis_name(TS)!{stop, self()},
     ok
 .
+
