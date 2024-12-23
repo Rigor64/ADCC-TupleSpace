@@ -35,7 +35,7 @@ init(Name, true) ->
     % - Empty list for the PendingRequestsQueue 
     server(Name, Supervisor, WhiteListRef, TupleSpaceRef, []);
 
-% Initialization function with the Supervisor (no spawing needed)
+% Initialization function with the Supervisor (no spawning needed)
 init(Name, Supervisor) ->
     % Enable trap_exit management
     % Setting the flag to trap 'EXIT' signals for handling process crashes or exits
