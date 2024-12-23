@@ -346,3 +346,9 @@ Oltre alle prescritte funzioni, vi è anche la possibilità di procedere alla **
 * list (tsm) -> okpatato come risposta
 
 * process pending request (tsm) -> WQ
+
+* che cosa dire del gen server e come è stato implementato
+
+* quando converto il markdown in pdf sia la tabel of content, sia le immagini non ci sono. Possiamo esportarlo senza.
+
+Baci baci e buon rientro a casa <3
