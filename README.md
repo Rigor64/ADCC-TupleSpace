@@ -46,14 +46,12 @@ Oltre alle prescritte funzioni, vi è anche la possibilità di procedere alla **
 <!-- SCELTE IMPLEMENTATIVE -->
 ## Scelte implementative
 
-___
-
 <!-- MODULI -->
 ### MODULI
 
 * Modulo `tss`: Tuple-Space Supervisor.
   Si occupa della supervisione del Tuple-Space Manager (`tsm`) e della sua inizializzazione.
-  Nel caso in cui il TS Manager decade lo rispristina.
+  Nel caso in cui il Tuple-Space Manager decade, lo rispristina.
 
 * Modulo `tsm`: Tuple-Space Manager.
 
@@ -63,6 +61,7 @@ ___
   * Tabella DETS: memorizzazione del Tuple Space su disco.
 
   Gestisce i messaggi inviati tramite il processo Tuple-Space Client.
+  Sono state implementate due funzioni `init`
 
 * Modulo `ts`: Tuple-Space Client.
 
@@ -72,25 +71,11 @@ ___
 
 ### STRUTTURE DATI
 
-* Due tabelle ETS private, così da non esporre le tabelle ai nodi esterni, con tipologia `set`, dove le chiavi univoche sono i PID dei nodi autorizzati:
+* **space (TS)**: Spazio di tuple. Tabella contenente le tuple inserite dai nodi autorizzati. Una tabella DETS per il salvaggio periodico del Tupla Space su disco.
 
-  * **whitelist (WL)** : Memorizzazione dei PID che possono accedere al Tuple Space.
-
-  * **space (TS)** : Spazio di tuple. Tabella contenente le tuple inserite dai nodi autorizzati.
+* **whitelist (WL)**: Memorizzazione dei PID dei nodi autorizzati, quelli cioè che possono accedere al Tuple Space. Tabella ETS privata, così da non esporre le tabelle ai nodi esterni, con tipologia `set`, dove le chiavi univoche sono i PID dei nodi autorizzati.
 
 * **PendingRequestsQueue** : Lista contenente le operazioni di lettura (`in`, `rd`), in attesa di Pattern Matching.
-
-* Una tabella DETS per il salvaggio periodico del Tupla Space su disco.
-
-### MATCH SPECIFICATION ????
-
-Le operazioni di lettura e struttura devono sottostare ad un certo pattern da seguire per poter inserire un record nel Tuple Space è il seguente:
-
-```erl
-{'$1','$2', atomo, '$3'}
-% oppure
-{'_', '_', atomo, '_'}
-```
 
 ### FUNZIONI INTERFACCIA CLIENT
 
@@ -118,21 +103,19 @@ Le operazioni di lettura e struttura devono sottostare ad un certo pattern da se
 </div>
 <br />
 
----
-
 ### FUNZIONI AUSILIARIE
 
 * list ????
 
 * `removeFromWhiteList(WhiteListRef, Pid)`: elimina il nodo della whitelist, quindi il nodo non sarà più autorizzato ad accedere al TupleSpace.
 
-* `removePendingRequests(PendingRequestsQueue, Pid)`: elimina tutte le richieste di `in` o `rd` relative a quel nodo (nella PendingRequestQueue).
-
 * `tryProcessRequest(TupleSpaceRef, {Type, Pid, Pattern}, PendingRequestsQueue)`: controlla se la richesta di `in` o `rd` di uno specifico pattern è presente nel Tuple Space, altrimenti ritorna la richiesta da aggiungere al PendingRequestsQueue.
 
 * `inWhiteList(WhiteListRef, Pid)`: verifica la presenza del nodo nella White List, quindi se il nodo è autorizzato e può accedere al Tuple Space.
 
-* `abortPendingRequests({Type, Pid, Pattern}, PendingRequestsQueue)`:
+* `removePendingRequests(PendingRequestsQueue, Pid)`: rimuove tutte le richieste di `in` o `rd` relative a quel nodo (nella PendingRequestQueue).
+
+* `abortPendingRequests({Type, Pid, Pattern}, PendingRequestsQueue)`: rimuove dalla PendingRequestQueue tutte le richieste di `in` o `rd` che coincidono con la tupla ({Type, Pid, Pattern}) passata.
 
 * `processPendingRequests(TupleSpaceRef, PendingRequestsQueue)`: prova ad eseguire le richieste in attesa, richiamando `tryProcessRequest`. Crea una nuova PendingRequestsQueue contenente tutte le richieste che non è possibile eseguire.
 
@@ -144,9 +127,9 @@ Le operazioni di lettura e struttura devono sottostare ad un certo pattern da se
 
 ---
 
-* **TrapExit**: è stato implemenatato per tutelare il Server Tuple Space dalla caduta di un eventuale link non autorizzato.
+* **TrapExit**: è stato implemenatato per tutelare il Server Tuple Space dalla caduta di un eventuale link. Effettua il re-spawn del **supervisor**.
 
-
+### Esempio di Matching Specification
 
 <br />
 <div align="center">
@@ -156,10 +139,12 @@ Le operazioni di lettura e struttura devono sottostare ad un certo pattern da se
 
 <p align="right">(<a href="#readme-top">Torna su</a>)</p>
 
-<!-- STRESS TEST -->
-## Stress Test Result
+<!-- TEST -->
+## TEST
 
-<table id = "customers">
+### Average Function Time
+
+<table>
 <tr>
   <th>Company</th>
   <th>Contact</th>
@@ -171,6 +156,10 @@ Le operazioni di lettura e struttura devono sottostare ad un certo pattern da se
   <td>Country</td>
 </tr>
 </table>
+
+### Average Node Fail time
+
+
 
 1. Provare a rimuovere un Ts_actor e vedere se è ancora vivo.
 
@@ -191,6 +180,8 @@ removeNode tsm
 
 abort pending request
 
-process pending request (WQ)
-
 {in, Pid, Pattern} (tsm receive)
+
+* list (tsm) -> okpatato come risposta
+
+* process pending request (tsm) -> WQ
