@@ -16,6 +16,7 @@ init(Name, Manager) ->
     
     % Print the supervisor's PID 
     io:format("Supervisor [~p] - Activated\n", [self()]),
+
     % Start the server for handling incoming messages  
 	server(Name, Manager)
 .
@@ -28,12 +29,17 @@ server(Name, Manager) ->
     % wait for a message
 	receive
         % If the tuple space manager process goes down, the supervisor restores it 
-		{'EXIT', Manager, _Reason} ->
-            
-            % Spawn a new process for the 'tsm:init' function and link it to the current process.
+		{'EXIT', Manager, Reason} ->
+
+            {_, Pid} = Reason,
+
+            % Spawn a new process for the 'tsm:init' function and link it to the current process
             NewManager = spawn_link(node(), tsm, init, [Name, self()]),
+            
             % Register the new manager process (it can be accessed globally)
             global:register_name(Name, NewManager),
+
+            Pid!{recovered},
 
             % Call the server to continue the loop 
             server(Name, NewManager);
@@ -41,7 +47,7 @@ server(Name, Manager) ->
         % If the supervisor receives a stop message from the manager, it stops 
         {stop, Manager} ->
             
-            % unlink from the manager process 
+            % Unlink the process 
             unlink(Manager),
             io:format("Supervisor [~p] - Deactivated\n", [self()]);
 

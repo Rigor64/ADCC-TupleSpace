@@ -184,8 +184,8 @@ server(Name, Supervisor, WhiteListRef, TupleSpaceRef, PendingRequestsQueue) ->
 
         % Test to see if the TS is restored after a crash (termination of the process)
         % (Test case to simulate a crash for recovery purposes)
-        {test_crash} ->
-            exit("Test exit");
+        {test_crash, Pid} ->
+            exit({crash, Pid});
         
         % Get a list of the current tuples in the TS 
         {list, Pid} ->
@@ -260,7 +260,7 @@ inWhiteList(WhiteListRef, Node) ->
 removePendingRequests(PendingRequestsQueue, Node) ->
     NewPendingRequestsQueue = lists:foldr(
         fun({_Type, Pid, _Pattern}, Acc) ->
-            % Check if the request's PID matches the removed Node 
+            % Check if the request's PID matches the given Node 
             case Pid of
                 % If the match is found, do not include it 
                 Node -> Acc;
@@ -271,6 +271,7 @@ removePendingRequests(PendingRequestsQueue, Node) ->
         [],
         PendingRequestsQueue
     ),
+    % Return the updated queue
     NewPendingRequestsQueue
 .
 
@@ -279,10 +280,12 @@ tryProcessRequest(TupleSpaceRef, {Type, Pid, Pattern}, PendingRequestsQueue) ->
     % Control over Pattern Matching
     Res = dets:match_object(TupleSpaceRef, {Pattern}),
     case Res of
+
         % If no match is found, add the request to the PendingRequestsQueue 
         [] ->
             NewPendingRequestsQueue = PendingRequestsQueue ++ [{Type, Pid, Pattern}];
-        % otherwise process the request 
+
+        % otherwise, process the request 
         [{H} | _T] ->
             Pid!{ok, H},
             case Type of
@@ -295,10 +298,11 @@ tryProcessRequest(TupleSpaceRef, {Type, Pid, Pattern}, PendingRequestsQueue) ->
     NewPendingRequestsQueue
 .
 
-% Process the pending requests in the waitqueue (WQ)
+% Process the pending requests in the WQ (pending requests queue)
 processPendingRequests(TupleSpaceRef, WQ) ->
-    % For each request, attempt to process it 
+    % Attempt to process each request 
     NewPendingRequestsQueue = lists:foldr(
+
         fun({Type, Pid, Pattern}, Acc) -> 
             NewAcc = tryProcessRequest(TupleSpaceRef, {Type, Pid, Pattern}, Acc),
             NewAcc
@@ -306,6 +310,7 @@ processPendingRequests(TupleSpaceRef, WQ) ->
         [],
         WQ	
     ),
+    % Return the updated WQ 
     NewPendingRequestsQueue
 .
 
@@ -315,7 +320,7 @@ abortPendingRequest({Type, Pid, Pattern}, PendingRequestsQueue) ->
 		fun(Elem, Acc) ->
             % Check if the current Elem matches the request to abort
 			case Elem of
-                % If it matches, do not add it (removing it)
+                % If it matches, do not add it (removing it from the queue)
                 {Type, {Pid, _Tag}, Pattern} ->
                     Acc;
                 % otherwise, add it to the accumulator 
