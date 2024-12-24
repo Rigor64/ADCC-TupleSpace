@@ -35,7 +35,7 @@ init(Name, true) ->
     % - Empty list for the PendingRequestsQueue 
     server(Name, Supervisor, WhiteListRef, TupleSpaceRef, []);
 
-% Initialization function with the Supervisor (no spawing needed)
+% Initialization function with the Supervisor (no spawning needed)
 init(Name, Supervisor) ->
     % Enable trap_exit management
     % Setting the flag to trap 'EXIT' signals for handling process crashes or exits
@@ -184,8 +184,8 @@ server(Name, Supervisor, WhiteListRef, TupleSpaceRef, PendingRequestsQueue) ->
 
         % Test to see if the TS is restored after a crash (termination of the process)
         % (Test case to simulate a crash for recovery purposes)
-        {test_crash} ->
-            exit("Test exit");
+        {test_crash, Pid} ->
+            exit({crash, Pid});
         
         % Get a list of the current tuples in the TS 
         {list, Pid} ->

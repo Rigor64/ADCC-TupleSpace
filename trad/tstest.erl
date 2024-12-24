@@ -6,6 +6,7 @@
     avgTimeIN/2,
     avgTimeRD/2,
     avgTimeOUT/2,
+	avgTimeRecovery/2,
 
 	testBattery_IO_seq/2,
 	testBattery_IO_conc/2
@@ -142,3 +143,47 @@ testBattery_IO_conc(TS, N) ->
 	% Initiate (spawn) a concurrent process for measuring the average time for the 'in' operation
 	spawn(tstest, avgTimeIN, [TS, N])
 .
+
+% 
+avgTimeRecovery(TS, N) ->
+		% Adding the node to the tuple space TS 
+
+
+	% The 'out' operation is performed for each element in the sequence
+	Times = lists:map(
+		fun (_E) ->
+			% Start time 
+			Tin = erlang:system_time(microsecond),
+
+			global:whereis_name(TS)!{test_crash, self()},
+
+			% Wait for a message (response from the TS)
+			receive
+				% A match was found 
+				{recovered} -> ok
+			end,
+
+			% End time 
+			Tout = erlang:system_time(microsecond),
+
+			% Calculate the elapsed time 
+			T = Tout - Tin,
+			T
+		end,
+		% Create a list of integers from 0 to N
+		lists:seq(0, N)
+	),
+	
+	% Total number of iterations 
+	Total = length(Times),
+	
+	% Sum each invidual time 
+	Sum = lists:sum(Times),
+
+	% Calculate the average time 
+	AvgTime = Sum / Total,
+
+	io:format("Avg recovery time (OUT): ~p us\n", [AvgTime])
+	
+.
+	
