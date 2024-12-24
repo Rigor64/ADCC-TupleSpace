@@ -177,4 +177,4 @@ wq(TS) -> gen_server:call({global, TS}, {wq}).
 
 % Send an asunchronous 'crash' message 
 % (for ensuring that the system can recover)
-crash(TS) -> gen_server:cast({global, TS}, {crash}).
+crash(TS) -> gen_server:cast({global, TS}, {test_crash, self()}).

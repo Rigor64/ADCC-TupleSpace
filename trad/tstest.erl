@@ -146,9 +146,6 @@ testBattery_IO_conc(TS, N) ->
 
 % 
 avgTimeRecovery(TS, N) ->
-		% Adding the node to the tuple space TS 
-
-
 	% The 'out' operation is performed for each element in the sequence
 	Times = lists:map(
 		fun (_E) ->
@@ -183,7 +180,7 @@ avgTimeRecovery(TS, N) ->
 	% Calculate the average time 
 	AvgTime = Sum / Total,
 
-	io:format("Avg recovery time (OUT): ~p us\n", [AvgTime])
+	io:format("Avg recovery time: ~p us\n", [AvgTime])
 	
 .
 	
