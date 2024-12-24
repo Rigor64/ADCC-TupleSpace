@@ -29,10 +29,15 @@ server(Name, Manager) ->
     % wait for a message
 	receive
         % If the tuple space manager process goes down, the supervisor restores it 
-		{'EXIT', Manager, _Reason} ->
+		{'EXIT', Manager, Reason} ->
+
+            {_, Pid} = Reason,
 
             % Start a new 'gen_server' process to replace the old manager and link it to the supervisor 
             {ok, NewManager} = gen_server:start_link({global, Name}, tsb, [Name, self()], []),
+            
+            Pid!{recovered},
+
             server(Name, NewManager);
         
         % If the supervisor receives a stop message from the manager, it stops 

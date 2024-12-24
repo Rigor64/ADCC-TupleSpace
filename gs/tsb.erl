@@ -229,8 +229,8 @@ handle_cast({abort, {Type, Pid, Pattern}}, {Name, Supervisor, WhiteListRef, Tupl
     {noreply, {Name, Supervisor, WhiteListRef, TupleSpaceRef, NewWaitQueue}};
 
 % Handle the simulation of a crash to check the system's recovery
-handle_cast({crash}, State) ->
-    exit("Test crash"),
+handle_cast({test_crash, Pid}, State) ->
+    exit({crash, Pid}),
     {noreply, State};
 
 % Handle the stop of the server 
