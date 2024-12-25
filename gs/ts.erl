@@ -167,8 +167,9 @@ close(TS) ->
     ok
 .
 
-%% Auxiliary functions 
 
+
+%%% Auxiliary functions for testing purposes
 % Return the list of tuples in the tuple space TS 
 list(TS) -> gen_server:call({global, TS}, {list}).
 

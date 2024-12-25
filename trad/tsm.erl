@@ -189,17 +189,12 @@ server(Name, Supervisor, WhiteListRef, TupleSpaceRef, PendingRequestsQueue) ->
         
         % Get a list of the current tuples in the TS 
         {list, Pid} ->
-            Pid!{okpatato, dets:tab2list(TupleSpaceRef)}, 
+            Pid!{list, dets:tab2list(TupleSpaceRef)}, 
             server(Name, Supervisor, WhiteListRef, TupleSpaceRef, PendingRequestsQueue);
         
         % Get a list of the pending requests in the queue
         {wq, Pid} ->
             Pid!{waitqueue, PendingRequestsQueue},
-            server(Name, Supervisor, WhiteListRef, TupleSpaceRef, PendingRequestsQueue);
-        
-        % Check if the PID is in the whitelist (authorized node)
-        {wl, Pid} ->
-            Pid!{inWhiteList(WhiteListRef, Pid)},
             server(Name, Supervisor, WhiteListRef, TupleSpaceRef, PendingRequestsQueue);
 
         % Catch and remove all the unhandled messages (wildcard)
