@@ -189,7 +189,9 @@ server(Name, Supervisor, WhiteListRef, TupleSpaceRef, PendingRequestsQueue) ->
         
         % Get a list of the current tuples in the TS 
         {list, Pid} ->
-            Pid!{list, dets:tab2list(TupleSpaceRef)}, 
+            % Contain the list of tuples 
+            Cont = dets:foldr(fun(E, A) -> A ++ [E] end, [], TupleSpaceRef),
+            Pid!{list, Cont}, 
             server(Name, Supervisor, WhiteListRef, TupleSpaceRef, PendingRequestsQueue);
         
         % Get a list of the pending requests in the queue
