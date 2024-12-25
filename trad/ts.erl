@@ -19,7 +19,12 @@
     % Interfaces 3/3
     addNode/2,
     removeNode/2,
-    nodes/1
+    nodes/1,
+
+    %%% Testing interfaces
+    list/1,
+    wq/1,
+    crash/1
 ]).
 
 
@@ -138,3 +143,50 @@ close(TS) ->
     ok
 .
 
+
+
+
+
+%% Auxiliary functions for testing purposes
+
+% Return the list of tuples in the tuple space TS 
+list(TS) ->
+    % Send the request for the list of nodes 
+    global:whereis_name(TS)!{list, self()},
+    % Wait for a message (response from the TS)
+    receive
+        % Return the list of all nodes authorized 
+        {list, List} -> List
+    after
+        % If no response is received
+        % Return an error indicating that the timeout has expired
+        5000 -> {err, timeout}
+    end
+.
+
+% Return the wait queue list 
+wq(TS) ->
+    % Send the request for the list of nodes 
+    global:whereis_name(TS)!{wq, self()},
+    % Wait for a message (response from the TS)
+    receive
+        % Return the list of all nodes authorized 
+        {waitqueue, List} -> List
+    after
+        % If no response is received
+        % Return an error indicating that the timeout has expired
+        5000 -> {err, timeout}
+    end
+.
+
+% Send an asunchronous 'crash' message 
+% (for ensuring that the system can recover)
+crash(TS) ->
+    global:whereis_name(TS)!{test_crash, self()},
+
+    % Wait for a message (response from the TS)
+    receive
+        % A match was found 
+        {recovered} -> ok
+    end
+.

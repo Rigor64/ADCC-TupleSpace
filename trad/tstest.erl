@@ -152,13 +152,8 @@ avgTimeRecovery(TS, N) ->
 			% Start time 
 			Tin = erlang:system_time(microsecond),
 
-			global:whereis_name(TS)!{test_crash, self()},
-
-			% Wait for a message (response from the TS)
-			receive
-				% A match was found 
-				{recovered} -> ok
-			end,
+            % Crash test call
+			ts:crash(TS),
 
 			% End time 
 			Tout = erlang:system_time(microsecond),
