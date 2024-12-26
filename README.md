@@ -76,9 +76,10 @@ Oltre alle prescritte funzioni, vi è anche la possibilità di procedere alla **
 * I nodi che decadono non vengono rimpiazzati, solo il processo  manager e il processo supervisore vengono ripristinati.
 * Quando il link di un nodo autorizzato nella White List decade, il nodo resta attivo.
 * **TrapExit**: è stato implemenatato in fase di inizializzazione del processo manager, per tutelare il Tuple Space dalla caduta di un eventuale link.
+* Oltre all'implementazione tradizionale in Erlang, è stata sviluppata una varianteche sfrutta uno dei design comportamentali di Erlang, ossia il Gen-server e sono stati effettuati vari test, per avere una comparazione tra le due strategie.
 
-<!-- MODULI -->
-### MODULI
+<!-- MODULI (TRAD) -->
+### MODULI (TRAD)
 
 * Modulo `tss`: Tuple-Space Supervisor.
   Si occupa della supervisione del Tuple-Space Manager (`tsm`) e della sua inizializzazione.
@@ -88,7 +89,7 @@ Oltre alle prescritte funzioni, vi è anche la possibilità di procedere alla **
 
   Funzione di inizializzazione
   * `init(Name, true)`: Crea il processo supervisore per gestire il Tuple Space.
-  * `init(Name, Supervisor)`: Inizializzazione del manager escludendo la creazione del processo supervisione. Utilizzato per ripristinare il Tuple Space a partire dallo stesso 
+  * `init(Name, Supervisor)`: Inizializzazione del manager escludendo la creazione del processo supervisione. Utilizzato per ripristinare il Tuple Space a partire dallo stesso.
 
   Si occupa della creazione e gestione di:
   * Tabelle ETS: space (Tuple Space), whitelist (White List).
@@ -104,6 +105,11 @@ Oltre alle prescritte funzioni, vi è anche la possibilità di procedere alla **
   Interfaccia client in cui vengono invocate le varie operazioni che verranno inviate al Tuple-Space Manager.
 
 * Modulo `tstest`: Batteria di Stress Test per qualificare le prestazioni e la resilienza del sistema.
+
+<!-- MODULI (GEN-SERVER) -->
+### MODULI (gen-server)
+
+Stessa struttura della versione tradizionale, fatta eccezione per il modulo `tsm` che diventa `tsb` e che implementa le funzioni utilizzate dal gen-server
 
 <!-- STRUTTURE DATI -->
 ### STRUTTURE DATI
@@ -165,6 +171,12 @@ Oltre alle prescritte funzioni, vi è anche la possibilità di procedere alla **
 
 * `getNodes(WhiteListRef)`: lista dei nodi autorizzati presenti nella White List.
 
+#### TEST
+
+ * `list(TS)`: Restituisce la lista delle tuple nel Tuple Space
+ * `wq(TS)`: Restituisce la Wait Queue list
+ * `crash(TS)`: Manda un messaggio di crash sincrono
+
 <!-- ESEMPIO DI MATCHING SPECIFICATION -->
 ### Esempio di Matching Specification
 
@@ -221,7 +233,7 @@ Oltre alle prescritte funzioni, vi è anche la possibilità di procedere alla **
   </table>
 
 <!-- SEQ GEN-SERVER -->
-#### Seq Gen-server
+#### Seq gen-server
 
   <table>
     <tr>
@@ -273,23 +285,28 @@ Oltre alle prescritte funzioni, vi è anche la possibilità di procedere alla **
     </tr>
       <tr>
       <td>100</td>
-      <td>37.273</td>
-      <td>139.636</td>
-    </tr>    
+      <td>16.851</td>
+      <td>52.574</td>
+    </tr>
     <tr>
       <td>1000</td>
-      <td>6.444</td>
-      <td>58.617</td>
+      <td>9.284</td>
+      <td>67.887</td>
+    </tr>
+     <tr>
+      <td>10000</td>
+      <td>5.838</td>
+      <td>63.230</td>
     </tr>
     <tr>
       <td>100000</td>
-      <td>3.144</td>
-      <td>42.820</td>
+      <td>5.857</td>
+      <td>82.101</td>
     </tr>
   </table>
 
 <!-- DIS GEN-SERVER -->
-#### Dis Gen-server
+#### Dis gen-server
 
   <table>
     <tr>
@@ -309,8 +326,8 @@ Oltre alle prescritte funzioni, vi è anche la possibilità di procedere alla **
     </tr>
     <tr>
       <td>100000</td>
-      <td>2.795</td>
-      <td>26.432</td>
+      <td>13.888</td>
+      <td>301.542</td>
     </tr>
   </table>
 
@@ -336,19 +353,43 @@ Oltre alle prescritte funzioni, vi è anche la possibilità di procedere alla **
       <td>1000</td>
       <td> 6524.850</td>
     </tr>
-
   </table>
 
-## CHIEDERE A NICK
+#### gen-server
 
-* addNode in Whitelist -> quando un nodo inviato un messaggio sbagliato ( tipo ts:nodes() ), il ts si cancella.
+<br />
+<div align="center">
+    <img src="data/graficoavegare.png" alt="Screen1" width="425" height="325">
+</div>
+<br />
 
-* list (tsm) -> okpatato come risposta
-
-* process pending request (tsm) -> WQ
-
-* che cosa dire del gen server e come è stato implementato
-
-* quando converto il markdown in pdf sia la tabel of content, sia le immagini non ci sono. Possiamo esportarlo senza.
-
-Baci baci e buon rientro a casa <3
+<table>
+  <tr>
+    <th>Num. times</th>
+    <th>Avg (us)</th>
+  </tr>
+  <tr>
+    <td>1</td>
+    <td>34058.0</td>
+  </tr>
+  <tr>
+    <td>10</td>
+    <td>28763.636</td>
+  </tr>
+    <tr>
+    <td>100</td>
+    <td>22906.178</td>
+  </tr>
+  <tr>
+    <td>1000</td>
+    <td>15184.072</td>
+  </tr>
+  <tr>
+    <td>10000</td>
+    <td>15200.070</td>
+  </tr>
+  <tr>
+    <td>100000</td>
+    <td>18673.778</td>
+  </tr>
+</table>
