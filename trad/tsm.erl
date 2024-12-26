@@ -64,8 +64,6 @@ init(Name, Supervisor) ->
 
 % TS Server
 server(Name, Supervisor, WhiteListRef, TupleSpaceRef, PendingRequestsQueue) ->
-    %io:format("Debug print - SERVER PID (~p)\n", [self()]),
-    
     % Wait for a message 
     receive
         % Handle supervisor crash
@@ -85,8 +83,7 @@ server(Name, Supervisor, WhiteListRef, TupleSpaceRef, PendingRequestsQueue) ->
         % Handle destructive read (removal of the matching tuple)
         {in, Pid, Pattern} -> 
             % Check if the PID is present in the whitelist (authorized node)
-            %inWhiteList(WhiteListRef, Pid),
-            Present = true, % Assumption that the PID is authorized 
+            Present = inWhiteList(WhiteListRef, Pid),
             case Present of 
                  
                 true ->
@@ -229,7 +226,6 @@ removeNode(WhiteListRef, Node) ->
 
 % Delete a node from the whitelist
 removeFromWhiteList(WhiteListRef, Node) ->
-    io:format("Debug print - REMOVE NODE (~p)\n", [Node]),
     ets:delete_object(WhiteListRef, {Node})
 .
 
@@ -295,8 +291,8 @@ tryProcessRequest(TupleSpaceRef, {Type, Pid, Pattern}, PendingRequestsQueue) ->
     NewPendingRequestsQueue
 .
 
-% Process the pending requests in the WQ (pending requests queue)
-processPendingRequests(TupleSpaceRef, WQ) ->
+% Process the pending requests in the PendingRequestsQueue
+processPendingRequests(TupleSpaceRef, PendingRequestsQueue) ->
     % Attempt to process each request 
     NewPendingRequestsQueue = lists:foldr(
 
@@ -305,9 +301,9 @@ processPendingRequests(TupleSpaceRef, WQ) ->
             NewAcc
         end,
         [],
-        WQ	
+        PendingRequestsQueue	
     ),
-    % Return the updated WQ 
+    % Return the updated PendingRequestsQueue 
     NewPendingRequestsQueue
 .
 

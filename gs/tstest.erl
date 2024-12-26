@@ -48,7 +48,7 @@ avgTimeIN(TS, N) ->
     % Calculate the average time 
     AvgTime = Sum / Total,
 
-    io:format("Avg time (IN): ~p\n", [AvgTime])
+    io:format("Avg time (IN): ~p us\n", [AvgTime])
 .
 
 % Measure the average time in ms for the read non-destructive ('rd') operation for N iterations
@@ -85,7 +85,7 @@ avgTimeRD(TS, N) ->
     % Calculate the average time 
     AvgTime = Sum / Total,
 
-    io:format("Avg time (RD): ~p\n", [AvgTime])
+    io:format("Avg time (RD): ~p us\n", [AvgTime])
 .
 
 % Measure the average time in ms for the write ('out') operation for N iterations
@@ -122,7 +122,7 @@ avgTimeOUT(TS, N) ->
     % Calculate the average time 
     AvgTime = Sum / Total,
 
-    io:format("Avg time (OUT): ~p\n", [AvgTime])
+    io:format("Avg time (OUT): ~p us\n", [AvgTime])
 .
 
 

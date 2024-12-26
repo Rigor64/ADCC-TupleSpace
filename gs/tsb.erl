@@ -121,7 +121,6 @@ handle_call({in, Pattern}, From, {Name, Supervisor, WhiteListRef, TupleSpaceRef,
     {Pid, _} = From,
     % Check if the PID is present in the whitelist (authorized node)
     Present = inWhiteList(WhiteListRef, Pid),
-    %io:format("DEBUG PRINT - inWhiteList (in) (~p)\n", [Present]),
     case Present of
 
         % If it's authorized, attempt to process the read operation  
@@ -138,7 +137,6 @@ handle_call({rd, Pattern}, From, {Name, Supervisor, WhiteListRef, TupleSpaceRef,
     {Pid, _} = From,
     % Check if the PID is present in the whitelist (authorized node)
     Present = inWhiteList(WhiteListRef, Pid),
-    %io:format("DEBUG PRINT - inWhiteList (rd) (~p)\n", [Present]),
     case Present of
 
         % If it's authorized, attempt to process the read operation 
@@ -267,7 +265,6 @@ inWhiteList(WhiteListRef, Node) ->
         % otherwise, the Node is authorized (in the whitelist)
         [_H | _T] -> IsPresent = true
     end,
-    %io:format("DEBUG PRINT - inWhiteList - Node (~p) present? (~p)\n", [Node, IsPresent]),
     IsPresent
 .
 
@@ -297,9 +294,7 @@ removePendingRequests(PendingRequestsQueue, Node) ->
 .
 
 % Process pending requests in the PendingRequestsQueue 
-processPendingRequests({Name, Supervisor, WhiteListRef, TupleSpaceRef, PendingRequestsQueue}) ->
-    %io:format("DEBUG PRINT - processPendingRequests (start)\n", []),
-    
+processPendingRequests({Name, Supervisor, WhiteListRef, TupleSpaceRef, PendingRequestsQueue}) ->   
     NewPendingRequestsQueue = lists:foldr(
 		fun({Type, {Pid, Tag}, Pattern}, Acc) -> 
             % Attempt to process the request 
@@ -309,7 +304,6 @@ processPendingRequests({Name, Supervisor, WhiteListRef, TupleSpaceRef, PendingRe
 		[],
 		PendingRequestsQueue
 	),
-    %io:format("DEBUG PRINT - processPendingRequests (end)\n", []),
     % Return the updated PendingRequestsQueue 
 	NewPendingRequestsQueue
 .
@@ -321,12 +315,10 @@ tryProcessRequest({Type, {Pid, Tag}, Pattern}, {_Name, _Supervisor, _WhiteListRe
     case Res of
         % If no match is found, add the request to the PendingRequestsQueue  
         [] ->
-            %io:format("DEBUG PRINT - tryProcessRequest (pending)\n", []),
             NewPendingRequestsQueue = PendingRequestsQueue ++ [{Type, {Pid, Tag}, Pattern}];
 
         % otherwise, process the request  
         [{H} | _T] ->
-            %io:format("DEBUG PRINT - tryProcessRequest (matched)\n", []),
             % Reply with the matched tuple 
             gen_server:reply({Pid, Tag}, {ok, H}),
 
@@ -337,7 +329,6 @@ tryProcessRequest({Type, {Pid, Tag}, Pattern}, {_Name, _Supervisor, _WhiteListRe
             end,
             NewPendingRequestsQueue = PendingRequestsQueue
     end,
-    %io:format("DEBUG PRINT - tryProcessRequest (ended)\n", []),
     % Return the updated PendingRequestsQueue
     NewPendingRequestsQueue
 .
@@ -347,7 +338,6 @@ abortPendingRequest({Type, Pid, Pattern}, {_Name, _Supervisor, _WhiteListRef, _T
 
     NewPendingRequestsQueue = lists:foldr(
 		fun(Elem, Acc) ->
-            %io:format("DEBUG PRINT - abort (~p)\n", [Elem]), 
             % Check if the current Elem matches the request to abort
 			case Elem of
                 % If it matches, do not add it (removing it from the queue)
