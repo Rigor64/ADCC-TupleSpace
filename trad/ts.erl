@@ -179,7 +179,7 @@ wq(TS) ->
     end
 .
 
-% Send an asunchronous 'crash' message 
+% Send an asynchronous 'crash' message 
 % (for ensuring that the system can recover)
 crash(TS) ->
     global:whereis_name(TS)!{test_crash, self()},
