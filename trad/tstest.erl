@@ -4,8 +4,11 @@
 % Export all invocable functions 
 -export([
     avgTimeIN/2,
+    avgTimeINonCmd/2,
     avgTimeRD/2,
+    avgTimeRDonCmd/2,
     avgTimeOUT/2,
+    avgTimeOUTonCmd/2,
 	avgTimeRecovery/2,
 
 	testBattery_IO_seq/2,
@@ -14,6 +17,14 @@
 
 
 % Measure the average time in ms for the read destructive ('in') operation for N iterations
+avgTimeINonCmd(TS, N) ->
+    receive
+        {start} -> ok
+    end,
+    
+    avgTimeIN(TS, N)
+.
+
 avgTimeIN(TS, N) ->
 	% Adding the node to the tuple Space TS
     ts:addNode(TS, self()),
@@ -50,11 +61,16 @@ avgTimeIN(TS, N) ->
 	io:format("Avg time (IN): ~p us\n", [AvgTime])
 .
 
+avgTimeRDonCmd(TS, N) ->
+    receive
+        {start} -> ok
+    end,
+
+    avgTimeRD(TS, N)
+.
+
 % Measure the average time in ms for the read non-destructive ('rd') operation for N iterations
 avgTimeRD(TS, N) ->
-	% Adding the node to the tuple space TS 
-    ts:addNode(TS, self()),
-
 	% The 'rd' operation is performed for each element in the sequence
 	Times = lists:map(
 		fun (E) ->
@@ -88,9 +104,18 @@ avgTimeRD(TS, N) ->
 .
 
 % Measure the average time in ms for the write ('out') operation for N iterations
+
+avgTimeOUTonCmd(TS, N) ->
+    receive
+        {start} -> ok
+    end,
+
+    avgTimeOUT(TS, N)
+.
+
 avgTimeOUT(TS, N) ->
 	% Adding the node to the tuple space TS 
-    ts:addNode(TS, self()),
+    %ts:addNode(TS, self()),
 
 	% The 'out' operation is performed for each element in the sequence
 	Times = lists:map(
@@ -139,9 +164,16 @@ testBattery_IO_seq(TS, N) ->
 % Run concurrent average time tests 
 testBattery_IO_conc(TS, N) ->
 	% Initiate (spawn) a concurrent process for measuring the average time for the 'out' operation
-	spawn(tstest, avgTimeOUT, [TS, N]),
+	OutPid = spawn(tstest, avgTimeOUTonCmd, [TS, N]),
 	% Initiate (spawn) a concurrent process for measuring the average time for the 'in' operation
-	spawn(tstest, avgTimeIN, [TS, N])
+	InPid = spawn(tstest, avgTimeINonCmd, [TS, N]),
+
+    % Assume to be invoked by a node in whitelist
+    ts:addNode(TS, OutPid),
+    ts:addNode(TS, InPid),
+    
+    OutPid!{start},
+    InPid!{start}
 .
 
 % 

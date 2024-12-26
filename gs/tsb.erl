@@ -187,26 +187,45 @@ handle_cast({out, Pid, Tuple}, {Name, Supervisor, WhiteListRef, TupleSpaceRef, P
     
     {noreply, {Name, Supervisor, WhiteListRef, TupleSpaceRef, NewPendingRequestsQueue}};
 
-% Handle the addition of the Node to the whitelist
-handle_cast({add_node, Node}, {Name, Supervisor, WhiteListRef, TupleSpaceRef, PendingRequestsQueue}) ->
-    % Link the Node 
-    link(Node),
-    % Insert the Node to the whitelist 
-    ets:insert(WhiteListRef, {Node}),
 
-    {noreply, {Name, Supervisor, WhiteListRef, TupleSpaceRef, PendingRequestsQueue}};
+% Handle the addition of the Node to the whitelist
+handle_cast({add_node, Pid, Pid}, {Name, Supervisor, WhiteListRef, TupleSpaceRef, PendingRequestsQueue}) ->
+    % Check if the PID is present in the whitelist (authorized node)
+    First = ets:first(WhiteListRef),
+    case First of
+        '$end_of_table' ->
+            addNode(WhiteListRef, Pid),
+            {noreply, {Name, Supervisor, WhiteListRef, TupleSpaceRef, PendingRequestsQueue}};
+        _ ->
+            {noreply, {Name, Supervisor, WhiteListRef, TupleSpaceRef, PendingRequestsQueue}}
+    end;
+
+
+% Handle the addition of the Node to the whitelist
+handle_cast({add_node, Pid, Node}, {Name, Supervisor, WhiteListRef, TupleSpaceRef, PendingRequestsQueue}) ->
+    % Check if the PID is present in the whitelist (authorized node)
+            Present = inWhiteList(WhiteListRef, Pid),
+            case Present of 
+                true ->
+                    addNode(WhiteListRef, Node),
+                    {noreply, {Name, Supervisor, WhiteListRef, TupleSpaceRef, PendingRequestsQueue}};
+                false ->
+                    {noreply, {Name, Supervisor, WhiteListRef, TupleSpaceRef, PendingRequestsQueue}}
+            end;
 
 % Handle the removal of the Node from the Whitelist 
-handle_cast({rm_node, Node}, {Name, Supervisor, WhiteListRef, TupleSpaceRef, PendingRequestsQueue}) ->
-
-    % Unlink the Node 
-    unlink(Node),
-    % Remove the Node from the whitelist
-    removeFromWhiteList(WhiteListRef, Node),
-    % Remove the Node's read requests from the PendingRequestsQueue
-    ClearedQueue = removePendingRequests(PendingRequestsQueue, Node),
-
-    {noreply, {Name, Supervisor, WhiteListRef, TupleSpaceRef, ClearedQueue}};
+handle_cast({rm_node, Pid, Node}, {Name, Supervisor, WhiteListRef, TupleSpaceRef, PendingRequestsQueue}) ->
+    % Check if the PID is present in the whitelist (authorized node)
+    Present = inWhiteList(WhiteListRef, Pid),
+    case Present of 
+        true ->
+            removeNode(WhiteListRef, Node),
+            % Remove the Node's read requests from the PendingRequestsQueue
+            ClearedQueue = removePendingRequests(PendingRequestsQueue, Node),
+            {noreply, {Name, Supervisor, WhiteListRef, TupleSpaceRef, ClearedQueue}};
+        false ->
+            {noreply, {Name, Supervisor, WhiteListRef, TupleSpaceRef, PendingRequestsQueue}}
+    end;
 
 % Handle the abortion of a request from the PendingRequestsQueue 
 handle_cast({abort, {Type, Pid, Pattern}}, {Name, Supervisor, WhiteListRef, TupleSpaceRef, PendingRequestsQueue}) ->
@@ -351,4 +370,19 @@ abortPendingRequest({Type, Pid, Pattern}, {_Name, _Supervisor, _WhiteListRef, _T
 		PendingRequestsQueue
 	),
 	NewPendingRequestsQueue
+.
+
+
+removeNode(WhiteListRef, Node) ->
+    % Unlink the node 
+    unlink(Node), % Not triggering exit?
+    % Remove the node from the whitelist 
+    removeFromWhiteList(WhiteListRef, Node)
+.
+
+addNode(WhiteListRef, Node) ->
+    % Link the node 
+    link(Node),
+    % Insert the node to the whitelist
+    ets:insert(WhiteListRef, {Node})
 .
