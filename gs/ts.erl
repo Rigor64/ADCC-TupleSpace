@@ -145,13 +145,13 @@ out(TS, Tuple) ->
 % Add the Node to the TS, the Node has access to all tuples in the TS
 addNode(TS, Node) ->
     % Send an asynchronous 'add_node' message  
-    gen_server:cast({global, TS}, {add_node, Node})
+    gen_server:cast({global, TS}, {add_node, self(), Node})
 .
 
 % Remove the Node from the TS
 removeNode(TS, Node) ->
     % Send an asynchronous 'rm_node' message 
-    gen_server:cast({global, TS}, {rm_node, Node})
+    gen_server:cast({global, TS}, {rm_node, self(), Node})
 .
 
 % Get list of all nodes that have access to the TS 

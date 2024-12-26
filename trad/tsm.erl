@@ -142,18 +142,42 @@ server(Name, Supervisor, WhiteListRef, TupleSpaceRef, PendingRequestsQueue) ->
             server(Name, Supervisor, WhiteListRef, TupleSpaceRef, NewPendingRequestsQueue);
 
         % Handle the addition of the Node to the whitelist (authorizing a new node)
+        {add_node, Pid, Pid} ->
+            First = ets:first(WhiteListRef),
+            case First of
+                '$end_of_table' ->
+                    addNode(WhiteListRef, Pid),
+                    server(Name, Supervisor, WhiteListRef, TupleSpaceRef, PendingRequestsQueue);
+                _ ->
+                    server(Name, Supervisor, WhiteListRef, TupleSpaceRef, PendingRequestsQueue)
+            end;
+
         {add_node, Pid, Node} ->
-            addNode(WhiteListRef, Node),
-            Pid!{ok},
-            server(Name, Supervisor, WhiteListRef, TupleSpaceRef, PendingRequestsQueue);
+            % Check if the PID is present in the whitelist (authorized node)
+            Present = inWhiteList(WhiteListRef, Pid),
+            case Present of 
+                true ->
+                    addNode(WhiteListRef, Node),
+                    server(Name, Supervisor, WhiteListRef, TupleSpaceRef, PendingRequestsQueue);
+                false ->
+                    server(Name, Supervisor, WhiteListRef, TupleSpaceRef, PendingRequestsQueue)
+            end;
+
 
         % Handle the removal of the Node from the whitelist
         {rm_node, Pid, Node} ->
-            removeNode(WhiteListRef, Node),
-            % Remove any related pending requests 
-            NewPendingRequestsQueue = removePendingRequests(PendingRequestsQueue, Node),
-            Pid!{ok},
-            server(Name, Supervisor, WhiteListRef, TupleSpaceRef, NewPendingRequestsQueue);
+            % Check if the PID is present in the whitelist (authorized node)
+            Present = inWhiteList(WhiteListRef, Pid),
+            case Present of 
+                true ->
+                    removeNode(WhiteListRef, Node),
+                    % Remove any related pending requests 
+                    NewPendingRequestsQueue = removePendingRequests(PendingRequestsQueue, Node),
+                    Pid!{ok},
+                    server(Name, Supervisor, WhiteListRef, TupleSpaceRef, NewPendingRequestsQueue);
+                false ->
+                    server(Name, Supervisor, WhiteListRef, TupleSpaceRef, PendingRequestsQueue)
+            end;
 
         % Handle the nodes list (retrieve the list of authorized nodes)
         {nodes, Pid} ->
@@ -205,13 +229,14 @@ server(Name, Supervisor, WhiteListRef, TupleSpaceRef, PendingRequestsQueue) ->
 
 % Return a list of all 'nodes' (PIDs) in the withelist that have access to the TS
 getNodes(WhiteListRef) ->
-    % Define a function F to accumulate the elements in the ETS 
-    F = fun({Elem}, Acc) ->
-        % Append each element (Elem) to the accumulator (Acc) list 
-        Acc ++ [Elem]	
-    end,
     % To traverse the whitelist accumulating the elems 
-    Acc = ets:foldr(F, [], WhiteListRef),
+    Acc = ets:foldr(
+        fun({Elem}, Acc) ->
+            % Append each element (Elem) to the accumulator (Acc) list 
+            Acc ++ [Elem]	
+        end,
+        [],
+        WhiteListRef),
     % Return the list 
     Acc
 .
