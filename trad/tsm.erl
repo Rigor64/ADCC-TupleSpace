@@ -59,7 +59,6 @@ init(Name, Supervisor) ->
 .
 
 
-
 % Server
 server(Name, Supervisor, WhiteListRef, TupleSpaceRef, PendingRequestsQueue) ->
 
@@ -138,7 +137,7 @@ server(Name, Supervisor, WhiteListRef, TupleSpaceRef, PendingRequestsQueue) ->
             end,
             server(Name, Supervisor, WhiteListRef, TupleSpaceRef, NewPendingRequestsQueue);
 
-        % Add the current node to the whitelist (if is empty) 
+        % Add the current node to the whitelist (if it's empty) 
         {add_node, Pid, Pid} ->
             % Check the first element of the whitelist
             First = ets:first(WhiteListRef),
@@ -189,13 +188,13 @@ server(Name, Supervisor, WhiteListRef, TupleSpaceRef, PendingRequestsQueue) ->
             Pid!{ok, getNodes(WhiteListRef)},
             server(Name, Supervisor, WhiteListRef, TupleSpaceRef, PendingRequestsQueue);
 
-        % Handle the closing of the tuple space
+        % Handle the stopping and closing of the tuple space
         {stop, Pid} -> 
             % Check if the PID is present in the whitelist 
             Present = inWhiteList(WhiteListRef, Pid),
             case Present of 
                 true ->
-                    % If it's authorized, delete the current process and close the DETS table
+                    % If it's authorized, stop the system and close the DETS table
                     Supervisor!{stop, self()},
                     dets:close(TupleSpaceRef);  
                 false ->
@@ -305,7 +304,7 @@ tryProcessRequest(TupleSpaceRef, {Type, Pid, Pattern}, PendingRequestsQueue) ->
     Res = dets:match_object(TupleSpaceRef, {Pattern}),
     case Res of
         [] ->
-            % If there's no match, add the request to the PendingRequestsQueue
+            % If there's not a match, add the request to the PendingRequestsQueue
             NewPendingRequestsQueue = PendingRequestsQueue ++ [{Type, Pid, Pattern}];
         [{H} | _T] ->
             % Otherwise, process the request 

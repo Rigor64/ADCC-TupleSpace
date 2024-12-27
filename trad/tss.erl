@@ -30,7 +30,6 @@ server(Name, Manager) ->
 
         % If the tuple space manager process goes down, the supervisor restores it 
 		{'EXIT', Manager, Reason} ->
-
             {_, Pid} = Reason,
 
             % Spawn and link a new manager process to the supervisor
@@ -44,9 +43,8 @@ server(Name, Manager) ->
             % Call the server to continue the loop 
             server(Name, NewManager);
         
-        % If the supervisor receives a stop message from the manager, it stops 
+        % If the supervisor receives a stop message, it stops 
         {stop, Manager} ->
-            
             % Unlink the process 
             unlink(Manager),
             io:format("Supervisor [~p] - Deactivated\n", [self()]);

@@ -39,7 +39,7 @@ new(Name) ->
 
     io:format("New tuple space created: ~p\n", [Name]),
 
-    % Add the current node (self()) to the TS 
+    % Add the current node (self()) to the whitelist
     addNode(Name, self()),
     ok
 .
@@ -108,13 +108,13 @@ rd(TS, Pattern, Timeout) ->
     end
 .
 
-% Add the Node to the TS, the node now has access to all tuples in the TS
+% Add the Node to the whitelist, the node now has access to all tuples in the TS
 addNode(TS, Node) ->
     % Send request 
     global:whereis_name(TS)!{add_node, self(), Node}
 .
 
-% Remove the Node from the TS
+% Remove the Node from the whitelist
 removeNode(TS, Node) ->
     % Send request 
     global:whereis_name(TS)!{rm_node, self(), Node}
