@@ -7,7 +7,6 @@
 ]).
 
 
-
 % Initialization function
 init(Name, true) ->
     % Enable trap_exit management
