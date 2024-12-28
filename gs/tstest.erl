@@ -69,9 +69,6 @@ avgTimeRDonCmd(TS, N) ->
 
 % Measure the average time in us for the read non-destructive ('rd') operation for N iterations
 avgTimeRD(TS, N) ->
-    % Add the node to the whitelist  
-    ts:addNode(TS, self()),
-
     % The 'rd' operation is performed for each element in the sequence
     Times = lists:map(
         fun (E) ->
