@@ -188,7 +188,7 @@ server(Name, Supervisor, WhiteListRef, TupleSpaceRef, PendingRequestsQueue) ->
             Pid!{ok, getNodes(WhiteListRef)},
             server(Name, Supervisor, WhiteListRef, TupleSpaceRef, PendingRequestsQueue);
 
-        % Handle the stopping and closing of the tuple space
+        % Handle the stopping and closing of the tuple space, notifying the supervisor 
         {stop, Pid} -> 
             % Check if the PID is present in the whitelist 
             Present = inWhiteList(WhiteListRef, Pid),
