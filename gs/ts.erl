@@ -31,51 +31,46 @@
 
 % Creates a new tuple space TS with a specified Name
 new(Name) -> 
-    % Start a new 'gen_server' process for the Tuple Space Manager (tsb)
+    % Start a 'gen_server' process for the Tuple Space Manager (tsb)
     gen_server:start({global, Name}, tsb, [Name, true], []),
-    % Add the current process to the TS
+    % Add the current process to the whitelist
     addNode(Name, self()),
     ok
 .
 
-
-
 % Read a matching Pattern from the tuple space TS (destructive)
 % A blocking read operation with no timeout specification,
 % which blocks until a match is found and returns the matching tuple
-in(TS, Pattern) -> % Use matching specification
+% (Use matching specification)
+in(TS, Pattern) -> 
     in(TS, Pattern, infinity)
 .
 
 % Read a matching Pattern from the tuple space TS (desctructive) with timeout specification
-% if no match is found and the timeout expires, the function returns an error
+% If no match is found and the timeout expires, the function returns an error message
 in(TS, Pattern, Timeout) ->
     
     try 
-        % Send a synchronous call to the TS to perform the 'in' operation 
+        % Send a synchronous call to the manager to perform the 'in' operation 
         gen_server:call({global, TS}, {in, Pattern}, Timeout) of
         Response -> Response
     catch
         % Handle timeout error 
         throw:timeout ->
-
             % Abort the operation by sending an abort message 
             gen_server:cast({global, TS}, {abort, {in, self(), Pattern}}),
             {err, timeout};
 
         % Handle other errors that may occur during the 'in' operation
         error: Reason ->
-
             % Abort the operation by sending an abort message
             gen_server:cast({global, TS}, {abort, {in, self(), Pattern}}),
             {err, Reason};
 
         % Handle exit signals
         exit: Reason ->
-
             % Abort the operation by sending an abort message
             gen_server:cast({global, TS}, {abort, {in, self(), Pattern}}),
-            
             {Type, _} = Reason,
             % Handle specific exit types
             case Type of
@@ -85,44 +80,39 @@ in(TS, Pattern, Timeout) ->
     end
 .
 
-
-
 % Read a matching Pattern from the tuple space TS (non-destructive)
 % A blocking read operation with no timeout specification,
 % which blocks until a match is found and returns the matching tuple 
-rd(TS, Pattern) -> % Use matching specification
+% (Use matching specification)
+rd(TS, Pattern) -> 
     rd(TS, Pattern, infinity)
 .
 
 % Read a matching Pattern from the tuple space TS (non-desctructive) with timeout specification
-% If no match is found and the timeout expires, the function returns an error 
+% If no match is found and the timeout expires, the function returns an error message
 rd(TS, Pattern, Timeout) ->
 
     try 
-        % Send a synchronous call to the TS to perform the 'rd' operation 
+        % Send a synchronous call to the manager to perform the 'rd' operation 
         gen_server:call({global, TS}, {rd, Pattern}, Timeout) of
         Response -> Response
     catch
         % Handle timeout error
         throw:timeout ->
-             
             % Abort the operation by sending an abort message 
             gen_server:cast({global, TS}, {abort, {rd, self(), Pattern}}),
             {err, timeout};
 
         % Handle other errors that may occur during the 'rd' operation
         error: Reason ->
-            
             % Abort the operation by sending an abort message 
             gen_server:cast({global, TS}, {abort, {rd, self(), Pattern}}),
             {err, Reason};
         
         % Handle exit signals 
         exit: Reason ->
-            
             % Abort the operation by sending an abort message 
             gen_server:cast({global, TS}, {abort, {rd, self(), Pattern}}),
-            
             {Type, _} = Reason,
             % Handle specific exit types
             case Type of
@@ -131,8 +121,6 @@ rd(TS, Pattern, Timeout) ->
             end
     end
 .
-
-
 
 % Write the Tuple to the tuple space TS
 out(TS, Tuple) ->
@@ -140,15 +128,13 @@ out(TS, Tuple) ->
     gen_server:cast({global, TS}, {out, self(), Tuple})
 .
 
-
-
-% Add the Node to the TS, the Node has access to all tuples in the TS
+% Add the Node to the whitelist, the Node has access to all tuples in the TS
 addNode(TS, Node) ->
     % Send an asynchronous 'add_node' message  
     gen_server:cast({global, TS}, {add_node, self(), Node})
 .
 
-% Remove the Node from the TS
+% Remove the Node from the whitelist
 removeNode(TS, Node) ->
     % Send an asynchronous 'rm_node' message 
     gen_server:cast({global, TS}, {rm_node, self(), Node})
@@ -168,8 +154,10 @@ close(TS) ->
 .
 
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Auxiliary functions for testing purposes %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%%% Auxiliary functions for testing purposes
 % Return the list of tuples in the tuple space TS 
 list(TS) -> gen_server:call({global, TS}, {list}).
 
