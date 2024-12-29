@@ -284,7 +284,7 @@ removePendingRequests(PendingRequestsQueue, Node) ->
         fun({_Type, Pid, _Pattern}, Acc) -> 
             case Pid of
                 Node -> 
-                    % If there's a match, do not include related request 
+                    % If there's a match, do not include the related request 
                     Acc;
                 _ -> 
                     % Otherwise, include the request in the list     
