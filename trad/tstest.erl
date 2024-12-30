@@ -180,7 +180,7 @@ concAvgTimeIN(TS, N) ->
             P = spawn(
                 node(),
                 fun() ->
-					% Wait for the message
+                    % Wait for the message
                     receive
                         {start, Pid} -> ok
                     end,
@@ -199,7 +199,7 @@ concAvgTimeIN(TS, N) ->
                     Pid!{time, T} 
                 end
             ),
-			% Add the Node 
+            % Add the Node 
             ts:addNode(TS, P),
             P
         end,
@@ -238,7 +238,7 @@ concAvgTimeOUT(TS, N) ->
             P = spawn(
                 node(),
                 fun() ->
-					% Wait for a message
+                    % Wait for a message
                     receive
                         {start, Pid} -> ok
                     end,
@@ -257,7 +257,7 @@ concAvgTimeOUT(TS, N) ->
                     Pid!{time, T} 
                 end
             ),
-			% Add node
+            % Add node
             ts:addNode(TS, P),
             P
         end,
@@ -305,11 +305,11 @@ testBattery_IO_conc_2(TS, N) ->
     OutPid = spawn(
         node(),
         fun() ->
-			% Wait for start message
+            % Wait for start message
             receive
                 {start} -> ok
             end,
-			% Measure the average time 
+            % Measure the average time 
             concAvgTimeOUT(TS, N)
         end    
     ),
@@ -318,11 +318,11 @@ testBattery_IO_conc_2(TS, N) ->
     InPid = spawn(
         node(),
         fun() ->
-			% Wait for start message
+            % Wait for start message
             receive
                 {start} -> ok
             end,
-			% Measure the average time
+            % Measure the average time
             concAvgTimeIN(TS, N)
         end    
     ),
@@ -331,7 +331,7 @@ testBattery_IO_conc_2(TS, N) ->
     ts:addNode(TS, OutPid),
     ts:addNode(TS, InPid),
     
-	% Go to sleep, ensuring that the nodes is addeded before sending the start message 
+    % Go to sleep, ensuring that the nodes is addeded before sending the start message 
     timer:sleep(1000),
 
     OutPid!{start},
