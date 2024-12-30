@@ -164,6 +164,6 @@ list(TS) -> gen_server:call({global, TS}, {list}).
 % Return the wait queue list 
 wq(TS) -> gen_server:call({global, TS}, {wq}).
 
-% Send an asunchronous 'crash' message 
+% Send an asynchronous 'crash' message 
 % (for ensuring that the system can recover)
 crash(TS) -> gen_server:cast({global, TS}, {test_crash, self()}).
