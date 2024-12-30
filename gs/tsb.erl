@@ -309,7 +309,7 @@ tryProcessRequest({Type, {Pid, Tag}, Pattern}, {_Name, _Supervisor, _WhiteListRe
     case Res of
         % If there's not a match, add the request to the PendingRequestsQueue  
         [] ->
-            % in request are appent in tail, while rd are put as head of the queue, allowing full execution of pending requests
+            % 'in' requests are appended to the tail, while 'rd' ones are put as head of the queue, allowing grouping of pending requests
             case Type of
                 in -> NewPendingRequestsQueue = PendingRequestsQueue ++ [{Type, Pid, Pattern}];
                 rd -> NewPendingRequestsQueue = [{Type, Pid, Pattern}] ++ PendingRequestsQueue;
