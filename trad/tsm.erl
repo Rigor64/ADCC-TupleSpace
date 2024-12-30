@@ -279,7 +279,7 @@ inWhiteList(WhiteListRef, Node) ->
 
 % Remove pending requests from the PendingRequestsQueue related to a specific Node 
 removePendingRequests(PendingRequestsQueue, Node) ->
-    % Create the new list 
+    % Create new list 
     NewPendingRequestsQueue = lists:foldr(
         fun({_Type, Pid, _Pattern}, Acc) -> 
             case Pid of

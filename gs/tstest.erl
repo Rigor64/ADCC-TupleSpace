@@ -170,7 +170,7 @@ testBattery_IO_conc(TS, N) ->
     InPid!{start}
 .
 
-% Measure the average time needed to recovery purposes 
+% Measure the average time needed to recover the manager in the event of a failure  
 avgTimeRecovery(TS, N) ->
     Times = lists:map(
         fun (_E) ->
