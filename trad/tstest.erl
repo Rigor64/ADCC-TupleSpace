@@ -27,9 +27,6 @@ avgTimeINonCmd(TS, N) ->
 
 % Measure the average time in us for the read destructive ('in') operation for N iterations
 avgTimeIN(TS, N) ->
-	% Adding the node to the tuple Space TS
-    %ts:addNode(TS, self()),
-
 	% The 'in' operation is performed for each element in the sequence
 	Times = lists:map(
 		fun (E) ->
@@ -52,7 +49,7 @@ avgTimeIN(TS, N) ->
 	
 	% Total number of iterations 
 	Total = length(Times),
-	
+
 	% Sum each invidual time calculated 
 	Sum = lists:sum(Times),
 
@@ -116,9 +113,6 @@ avgTimeOUTonCmd(TS, N) ->
 
 % Measure the average time in us for the write ('out') operation for N iterations
 avgTimeOUT(TS, N) ->
-	% Adding the node to the tuple space TS 
-    %ts:addNode(TS, self()),
-
 	% The 'out' operation is performed for each element in the sequence
 	Times = lists:map(
 		fun (E) ->

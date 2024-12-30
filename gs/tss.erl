@@ -10,27 +10,25 @@
 
 % Intialization function 
 init(Name, Manager) ->
-
-    % Enable trap_exit management 
-    % Setting the flag to trap 'EXIT' signals for handling any linked process crashes or exits
+    % Enable trap_exit management
+    % Setting the flag to trap 'EXIT' signals for handling exit messages
     erlang:process_flag(trap_exit, true),
     
-    % Print the supervisor's PID 
     io:format("Supervisor [~p] - Activated\n", [self()]),
 
     % Start the server for handling incoming messages
 	server(Name, Manager)
 .
 
-% Supervisor's server 
+% Server 
 server(Name, Manager) ->
+
     io:format("Supervisor [~p] - Online\n", [self()]),
 
     % wait for a message
 	receive
         % If the tuple space manager process goes down, the supervisor restores it 
 		{'EXIT', Manager, Reason} ->
-
             {_, Pid} = Reason,
 
             % Start a new 'gen_server' process to replace the old manager and link it to the supervisor 
@@ -40,9 +38,8 @@ server(Name, Manager) ->
 
             server(Name, NewManager);
         
-        % If the supervisor receives a stop message from the manager, it stops 
+        % If the supervisor receives a stop message, it stops 
         {stop, Manager} ->
-
             % Unlink the process 
             unlink(Manager),
             io:format("Supervisor [~p] - Deactivated\n", [self()]);

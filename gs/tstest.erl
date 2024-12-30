@@ -15,27 +15,27 @@
     testBattery_IO_conc/2
 ]).
 
+% Measure avg time for the 'in' operation when a start message is received
 avgTimeINonCmd(TS, N) ->
     receive
         {start} -> ok
     end,
-
+    % Measure the average time 
     avgTimeIN(TS, N)
 .
 
-% Measure the average time in ms for the read destructive (in) operation for N iterations
+% Measure the average time in us for the read destructive (in) operation for N iterations
 avgTimeIN(TS, N) ->
     % The 'in' operation is performed for each element in the sequence
     Times = lists:map(
         fun (E) ->
-
-            % Start time 
+            % Start timer
             Tin = erlang:system_time(microsecond),
 
             % Perform the 'in' operation 
             ts:in(TS, {pattern, E}),
 
-            % End time 
+            % Stop timer
             Tout = erlang:system_time(microsecond),
 
             % Calculate the elapsed time 
@@ -58,28 +58,27 @@ avgTimeIN(TS, N) ->
     io:format("Avg time (IN): ~p us\n", [AvgTime])
 .
 
-% Measure the average time in ms for the read non-destructive ('rd') operation for N iterations
+% Measure avg time for the 'rd' operation when a start message is received 
 avgTimeRDonCmd(TS, N) ->
     receive
         {start} -> ok
     end,
-
+    % Measure the average time
     avgTimeRD(TS, N)
 .
-avgTimeRD(TS, N) ->
-    % Adding the node to the tuple space TS
-    ts:addNode(TS, self()),
 
+% Measure the average time in us for the read non-destructive ('rd') operation for N iterations
+avgTimeRD(TS, N) ->
     % The 'rd' operation is performed for each element in the sequence
     Times = lists:map(
         fun (E) ->
-            % Start time 
+            % Start timer 
             Tin = erlang:system_time(microsecond),
 
             % Perform the 'rd' operation 
             ts:rd(TS, {pattern, E}),
 
-            % End time 
+            % Stop timer
             Tout = erlang:system_time(microsecond),
 
             % Calculate the elapsed time 
@@ -102,28 +101,27 @@ avgTimeRD(TS, N) ->
     io:format("Avg time (RD): ~p us\n", [AvgTime])
 .
 
-
-
+% Measure avg time for the 'out' operation when a start message is received 
 avgTimeOUTonCmd(TS, N) ->
     receive
         {start} -> ok
     end,
-
+    % Measure the average time
     avgTimeOUT(TS, N)
 .
 
-% Measure the average time in ms for the write ('out') operation for N iterations
+% Measure the average time in us for the write ('out') operation for N iterations
 avgTimeOUT(TS, N) ->
     % The 'out' operation is performed for each element in the sequence
     Times = lists:map(
         fun (E) ->
-            % Start time 
+            % Start timer 
             Tin = erlang:system_time(microsecond),
 
             % Perform the 'out' operation 
             ts:out(TS, {pattern, E}),
 
-            % End time 
+            % Stop timer 
             Tout = erlang:system_time(microsecond),
 
             % Calculate the elapsed time 
@@ -147,9 +145,8 @@ avgTimeOUT(TS, N) ->
 .
 
 
-% Run sequential average time tests for in, rd and out operations
+% Run sequential average time tests
 testBattery_IO_seq(TS, N) ->
-
     % Measure and print the average time for the 'out' operation
     avgTimeOUT(TS, N),
     % Measure and print the average time for the 'rd' operation
@@ -160,9 +157,9 @@ testBattery_IO_seq(TS, N) ->
 
 % Run concurrent average time tests 
 testBattery_IO_conc(TS, N) ->
-    % Initiate (spawn) a concurrent process for measuring the average time for the 'out' operation
+    % Spawn a concurrent process for measuring the average time for the 'out' operation
     OutPid = spawn(tstest, avgTimeOUTonCmd, [TS, N]),
-    % Initiate (spawn) a concurrent process for measuring the average time for the 'in' operation
+    % Spawn a concurrent process for measuring the average time for the 'in' operation
     InPid = spawn(tstest, avgTimeINonCmd, [TS, N]),
 
     % Assume to be invoked by a node in whitelist
@@ -173,23 +170,22 @@ testBattery_IO_conc(TS, N) ->
     InPid!{start}
 .
 
-
+% Measure the average time needed to recovery purposes 
 avgTimeRecovery(TS, N) ->
-    % The 'out' operation is performed for each element in the sequence
     Times = lists:map(
         fun (_E) ->
-            % Start time 
+            % Start timer 
             Tin = erlang:system_time(microsecond),
 
+            % Crash test call 
             ts:crash(TS),
 
             % Wait for a message (response from the TS)
-            receive
-                % A match was found 
+            receive 
                 {recovered} -> ok
             end,
 
-            % End time 
+            % Stop timer 
             Tout = erlang:system_time(microsecond),
 
             % Calculate the elapsed time 
