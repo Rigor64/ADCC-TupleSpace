@@ -259,8 +259,7 @@ concAvgTimeIN(TS, N) ->
 
     lists:foreach(
         fun(P) ->
-            P!{start, self()},
-            io:format("DEBUG - Start IN pid (~p)\n", [P])
+            P!{start, self()}
         end,
         Pids
     ),
@@ -315,8 +314,7 @@ concAvgTimeOUT(TS, N) ->
 
     lists:foreach(
         fun(P) ->
-            P!{start, self()},
-            io:format("DEBUG - Start OUT pid (~p)\n", [P])
+            P!{start, self()}
         end,
         Pids
     ),
