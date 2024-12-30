@@ -309,7 +309,7 @@ tryProcessRequest(TupleSpaceRef, {Type, Pid, Pattern}, PendingRequestsQueue) ->
                 in -> NewPendingRequestsQueue = PendingRequestsQueue ++ [{Type, Pid, Pattern}];
                 rd -> NewPendingRequestsQueue = [{Type, Pid, Pattern}] ++ PendingRequestsQueue;
                 _ -> NewPendingRequestsQueue = PendingRequestsQueue
-            end,
+            end;
         [{H} | _T] ->
             % Otherwise, process the request 
             Pid!{ok, H},

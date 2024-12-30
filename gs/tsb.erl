@@ -314,7 +314,7 @@ tryProcessRequest({Type, {Pid, Tag}, Pattern}, {_Name, _Supervisor, _WhiteListRe
                 in -> NewPendingRequestsQueue = PendingRequestsQueue ++ [{Type, Pid, Pattern}];
                 rd -> NewPendingRequestsQueue = [{Type, Pid, Pattern}] ++ PendingRequestsQueue;
                 _ -> NewPendingRequestsQueue = PendingRequestsQueue
-            end,  
+            end;
         [{H} | _T] ->
             % Otherwise, process the request
             % Reply with the matched tuple 
