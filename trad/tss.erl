@@ -13,23 +13,23 @@ init(Name, Manager) ->
     % Enable trap_exit management
     % Setting the flag to trap 'EXIT' signals for handling exit messages
     erlang:process_flag(trap_exit, true),
- 
+
     io:format("Supervisor [~p] - Activated\n", [self()]),
 
     % Start the server for handling incoming messages  
-	server(Name, Manager)
+    server(Name, Manager)
 .
 
-% Server  
+% Server
 server(Name, Manager) ->
 
     io:format("Supervisor [~p] - Online\n", [self()]),
 
     % Wait for a message
-	receive
+    receive
 
         % If the tuple space manager process goes down, the supervisor restores it 
-		{'EXIT', Manager, Reason} ->
+        {'EXIT', Manager, Reason} ->
             {_, Pid} = Reason,
 
             % Spawn and link a new manager process to the supervisor
@@ -52,5 +52,5 @@ server(Name, Manager) ->
         % Handle any other message
         _ ->
             server(Name, Manager)
-	end
+    end
 .
