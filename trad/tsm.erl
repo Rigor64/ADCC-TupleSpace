@@ -304,8 +304,12 @@ tryProcessRequest(TupleSpaceRef, {Type, Pid, Pattern}, PendingRequestsQueue) ->
     Res = dets:match_object(TupleSpaceRef, {Pattern}),
     case Res of
         [] ->
-            % If there's not a match, add the request to the PendingRequestsQueue
-            NewPendingRequestsQueue = PendingRequestsQueue ++ [{Type, Pid, Pattern}];
+            % in request are appent in tail, while rd are put as head of the queue, allowing full execution of pending requests
+            case Type of
+                in -> NewPendingRequestsQueue = PendingRequestsQueue ++ [{Type, Pid, Pattern}];
+                rd -> NewPendingRequestsQueue = [{Type, Pid, Pattern}] ++ PendingRequestsQueue;
+                _ -> NewPendingRequestsQueue = PendingRequestsQueue
+            end,
         [{H} | _T] ->
             % Otherwise, process the request 
             Pid!{ok, H},
@@ -338,9 +342,9 @@ processPendingRequests(TupleSpaceRef, PendingRequestsQueue) ->
 % Remove a specific request from the PendingRequestsQueue
 abortPendingRequest({Type, Pid, Pattern}, PendingRequestsQueue) ->
     NewPendingRequestsQueue = lists:foldr(
-		fun(Elem, Acc) ->
+        fun(Elem, Acc) ->
             % Check if the current Elem matches the request to abort
-			case Elem of
+            case Elem of
                 {Type, {Pid, _Tag}, Pattern} ->
                     % If it matches, it's not added to the new list 
                     Acc;
@@ -348,9 +352,9 @@ abortPendingRequest({Type, Pid, Pattern}, PendingRequestsQueue) ->
                     % Otherwise, add it to the new list  
                     Acc ++ [Elem]
             end
-		end,
-		[],
-		PendingRequestsQueue
-	),
-	NewPendingRequestsQueue
+        end,
+        [],
+        PendingRequestsQueue
+    ),
+    NewPendingRequestsQueue
 .

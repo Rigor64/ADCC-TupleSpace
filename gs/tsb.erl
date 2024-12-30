@@ -290,16 +290,16 @@ removePendingRequests(PendingRequestsQueue, Node) ->
 % Process pending requests in the PendingRequestsQueue 
 processPendingRequests({Name, Supervisor, WhiteListRef, TupleSpaceRef, PendingRequestsQueue}) ->   
     NewPendingRequestsQueue = lists:foldr(
-		fun({Type, {Pid, Tag}, Pattern}, Acc) -> 
+        fun({Type, {Pid, Tag}, Pattern}, Acc) -> 
             % Attempt to process the request 
-			NewAcc = tryProcessRequest({Type, {Pid, Tag}, Pattern}, {Name, Supervisor, WhiteListRef, TupleSpaceRef, Acc}),
-			NewAcc
-		end,
-		[],
-		PendingRequestsQueue
-	),
+            NewAcc = tryProcessRequest({Type, {Pid, Tag}, Pattern}, {Name, Supervisor, WhiteListRef, TupleSpaceRef, Acc}),
+            NewAcc
+        end,
+        [],
+        PendingRequestsQueue
+    ),
     % Return the updated PendingRequestsQueue 
-	NewPendingRequestsQueue
+    NewPendingRequestsQueue
 .
 
 % Attempt to process a request based on the type (in/rd) and pattern 
@@ -309,7 +309,12 @@ tryProcessRequest({Type, {Pid, Tag}, Pattern}, {_Name, _Supervisor, _WhiteListRe
     case Res of
         % If there's not a match, add the request to the PendingRequestsQueue  
         [] ->
-            NewPendingRequestsQueue = PendingRequestsQueue ++ [{Type, {Pid, Tag}, Pattern}];  
+            % in request are appent in tail, while rd are put as head of the queue, allowing full execution of pending requests
+            case Type of
+                in -> NewPendingRequestsQueue = PendingRequestsQueue ++ [{Type, Pid, Pattern}];
+                rd -> NewPendingRequestsQueue = [{Type, Pid, Pattern}] ++ PendingRequestsQueue;
+                _ -> NewPendingRequestsQueue = PendingRequestsQueue
+            end,  
         [{H} | _T] ->
             % Otherwise, process the request
             % Reply with the matched tuple 
@@ -328,20 +333,20 @@ tryProcessRequest({Type, {Pid, Tag}, Pattern}, {_Name, _Supervisor, _WhiteListRe
 % Remove a request from the PendingRequestsQueue
 abortPendingRequest({Type, Pid, Pattern}, {_Name, _Supervisor, _WhiteListRef, _TupleSpaceRef, PendingRequestsQueue}) ->
     NewPendingRequestsQueue = lists:foldr(
-		fun(Elem, Acc) ->
+        fun(Elem, Acc) ->
             % Check if the current Elem matches the request to abort
-			case Elem of
+            case Elem of
                 % If it matches, do not add it 
                 {Type, {Pid, _Tag}, Pattern} ->
                     Acc;
                 % Otherwise, add it to the new list  
                 _ -> Acc ++ [Elem]
             end
-		end,
-		[],
-		PendingRequestsQueue
-	),
-	NewPendingRequestsQueue
+        end,
+        [],
+        PendingRequestsQueue
+    ),
+    NewPendingRequestsQueue
 .
 
 % Remove the given node

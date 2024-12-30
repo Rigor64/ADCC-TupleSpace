@@ -17,7 +17,7 @@ init(Name, Manager) ->
     io:format("Supervisor [~p] - Activated\n", [self()]),
 
     % Start the server for handling incoming messages
-	server(Name, Manager)
+    server(Name, Manager)
 .
 
 % Server 
@@ -26,9 +26,9 @@ server(Name, Manager) ->
     io:format("Supervisor [~p] - Online\n", [self()]),
 
     % wait for a message
-	receive
+    receive
         % If the tuple space manager process goes down, the supervisor restores it 
-		{'EXIT', Manager, Reason} ->
+        {'EXIT', Manager, Reason} ->
             {_, Pid} = Reason,
 
             % Start a new 'gen_server' process to replace the old manager and link it to the supervisor 
@@ -47,5 +47,5 @@ server(Name, Manager) ->
         % Handle any other messages 
         _ ->
             server(Name, Manager)
-	end
+    end
 .
