@@ -12,7 +12,8 @@
     avgTimeRecovery/2,
 
     testBattery_IO_seq/2,
-    testBattery_IO_conc/2
+    testBattery_IO_conc/2,
+    testBattery_IO_conc_2/2
 ]).
 
 
@@ -203,4 +204,185 @@ avgTimeRecovery(TS, N) ->
 
     io:format("Avg recovery time: ~p us\n", [AvgTime])
     
+.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+concAvgTimeIN(TS, N) ->
+    Pids = lists:map(
+        fun(E) ->
+            P = spawn(
+                node(),
+                fun() ->
+                    receive
+                        {start, Pid} -> ok
+                    end,
+
+                   % Start timer
+                    Tin = erlang:system_time(microsecond),
+
+                    % Perform the 'out' operation 
+                    ts:in(TS, {pattern, E}),
+
+                    % Stop timer 
+                    Tout = erlang:system_time(microsecond),
+
+                    % Calculate the elapsed time 
+                    T = Tout - Tin,
+                    Pid!{time, T} 
+                end
+            ),
+            ts:addNode(TS, P),
+            P
+        end,
+        lists:seq(0, N)
+    ),
+    
+    timer:sleep(1000),
+
+    lists:foreach(
+        fun(P) ->
+            P!{start, self()},
+            io:format("DEBUG - Start IN pid (~p)\n", [P])
+        end,
+        Pids
+    ),
+
+    % The 'out' operation is performed for each element in the sequence
+    Times = readTimes([], N),
+    
+    % Total number of iterations 
+    Total = length(Times),
+    
+    % Sum each invidual time 
+    Sum = lists:sum(Times),
+
+    % Calculate the average time 
+    AvgTime = Sum / Total,
+
+    io:format("Avg time (IN): ~p us\n", [AvgTime])
+.
+
+% Measure the average time in us for the write ('out') operation for N iterations
+concAvgTimeOUT(TS, N) ->
+    Pids = lists:map(
+        fun(E) ->
+            P = spawn(
+                node(),
+                fun() ->
+                    receive
+                        {start, Pid} -> ok
+                    end,
+
+                   % Start timer
+                    Tin = erlang:system_time(microsecond),
+
+                    % Perform the 'out' operation 
+                    ts:out(TS, {pattern, E}),
+
+                    % Stop timer 
+                    Tout = erlang:system_time(microsecond),
+
+                    % Calculate the elapsed time 
+                    T = Tout - Tin,
+                    Pid!{time, T} 
+                end
+            ),
+            ts:addNode(TS, P),
+            P
+        end,
+        lists:seq(0, N)
+    ),
+    
+    timer:sleep(1000),
+
+    lists:foreach(
+        fun(P) ->
+            P!{start, self()},
+            io:format("DEBUG - Start OUT pid (~p)\n", [P])
+        end,
+        Pids
+    ),
+
+    % The 'out' operation is performed for each element in the sequence
+    Times = readTimes([], N),
+    
+    % Total number of iterations 
+    Total = length(Times),
+    
+    % Sum each invidual time 
+    Sum = lists:sum(Times),
+
+    % Calculate the average time 
+    AvgTime = Sum / Total,
+
+    io:format("Avg time (OUT): ~p us\n", [AvgTime])
+.
+
+readTimes(Times, N) ->
+    receive
+        {time, T} ->
+            NTimes = Times ++ [T],
+            readTimes(NTimes, N)
+    after
+        2000 -> Times
+            %case length(Times) of
+            %    N -> Times;
+            %    A ->
+            %        io:format("READ (~p) - ~p\n", [self(), A]),
+            %        readTimes(Times, N)
+            %end
+    end
+.
+
+
+testBattery_IO_conc_2(TS, N) ->
+    % Spawn a concurrent process for measuring the average time for the 'out' operation
+    OutPid = spawn(
+        node(),
+        fun() ->
+            receive
+                {start} -> ok
+            end,
+
+            concAvgTimeOUT(TS, N)
+        end    
+    ),
+    % Spawn a concurrent process for measuring the average time for the 'in' operation
+    InPid = spawn(
+        node(),
+        fun() ->
+            receive
+                {start} -> ok
+            end,
+
+            concAvgTimeIN(TS, N)
+        end    
+    ),
+
+    % Assume to be invoked by a node in whitelist
+    ts:addNode(TS, OutPid),
+    ts:addNode(TS, InPid),
+    
+    timer:sleep(1000),
+
+    OutPid!{start},
+    InPid!{start}
 .
