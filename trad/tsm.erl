@@ -304,7 +304,7 @@ tryProcessRequest(TupleSpaceRef, {Type, Pid, Pattern}, PendingRequestsQueue) ->
     Res = dets:match_object(TupleSpaceRef, {Pattern}),
     case Res of
         [] ->
-            % in request are appent in tail, while rd are put as head of the queue, allowing full execution of pending requests
+            % 'in' requests are appended to the tail, while 'rd' ones are put as head of the queue, allowing grouping of pending requests
             case Type of
                 in -> NewPendingRequestsQueue = PendingRequestsQueue ++ [{Type, Pid, Pattern}];
                 rd -> NewPendingRequestsQueue = [{Type, Pid, Pattern}] ++ PendingRequestsQueue;
